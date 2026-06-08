@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 28'%3E%3Cpath d='M3 10H17' stroke='%232563EB' stroke-width='3.4' fill='none' stroke-linecap='round'/%3E%3Cpath d='M17 10L23 18' stroke='%232563EB' stroke-width='3.4' fill='none' stroke-linecap='round'/%3E%3Cpath d='M23 18H37' stroke='%232563EB' stroke-width='3.4' fill='none' stroke-linecap='round'/%3E%3C/svg%3E">
+<title>Overview — faultline</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="app.css">
+</head>
+<body data-page="overview">
+<div class="app"><div id="shell"></div><main class="main" id="view"></main></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="/supabase-config.js"></script>
+<script src="/app/app.js"></script>
+<script>
+fl.ready(async function(ctx){
+  var view=document.getElementById('view'), pid=fl.currentProject();
+  view.innerHTML='<div class="wrap"><div class="skel" style="height:120px"></div><div class="skel" style="height:90px"></div><div class="skel" style="height:240px"></div></div>';
+  var ov=await fl.getOverview(pid);
+  // load first active token for the one-liner
+  var tok='fl_YOUR_TOKEN';
+  try{
+    var toks=await fl.getTokens(pid);
+    var active=toks.filter(function(t){return !t.revoked_at;});
+    if(active.length) tok=(active[0].token_prefix||'fl_…')+'••••';
+  }catch(e){}
+  window._flToken=tok;
+  if(!ov.latest){ view.innerHTML=emptyOverview(ctx, tok); return; }
+  window._flOv=ov;
+  view.innerHTML=renderOverview(ov, ctx, tok);
+});
+
+function quickStartCard(tok){
+  // The full token is secret (shown once at creation), so we always show a clear placeholder
+  // and tell the user exactly where to get their token.
+  var oneliner = 'pip install faultline && FAULTLINE_TOKEN=fl_YOUR_TOKEN faultline run faultline_suite.py --push';
+  return '<div class="card glow hairline" style="margin-bottom:18px">'+
+    '<div class="card-head"><div>'+
+      '<div class="card-title">Quick start</div>'+
+      '<div class="card-meta">Install faultline, run your checks, and push results here — one command</div>'+
+    '</div></div>'+
+    '<div class="card-pad">'+
+      '<div class="code" data-c="'+fl.esc(oneliner)+'">'+
+        '<button class="copy-btn" onclick="fl.copy(this.parentElement.dataset.c,this)">Copy</button>'+
+        fl.esc(oneliner)+
+      '</div>'+
+      '<div class="muted" style="font-size:12.5px;margin-top:12px;line-height:1.55">'+
+        'Swap <span class="mono">fl_YOUR_TOKEN</span> for your project token. '+
+        '<a href="settings.html?tab=tokens" style="color:var(--accent);font-weight:600">Create one in Settings → Tokens →</a> '+
+        "(it's shown once — copy it straight into the command).<br>"+
+        "<span style=\"opacity:.8\">This token just tells faultline which dashboard to send results to — it is <b>not</b> an API key.</span>"+
+      '</div>'+
+    '</div>'+
+  '</div>';
+}
+
+function emptyOverview(ctx, tok){
+  return '<div class="wrap"><div class="page-head"><div><div class="page-title">Overview</div>'+
+    '<div class="page-sub">'+fl.esc((ctx.project&&ctx.project.slug)||'project')+'</div></div></div>'+
+    quickStartCard(tok||'fl_YOUR_TOKEN')+
+    gettingStartedPanel()+'</div>';
+}
+
+function renderOverview(ov, ctx, tok){
+  var L=ov.latest, score=Math.round(L.resilience), delta=Math.round(score-ov.prevScore);
+  var last7=ov.runs.filter(function(r){return new Date(r.created_at).getTime()>Date.now()-7*864e5;}).map(function(r){return +r.resilience;});
+  if(last7.length<2) last7=ov.runs.slice(-7).map(function(r){return +r.resilience;});
+  var reg=ov.openRegs[0];
+  var h='<div class="wrap">';
+  h+='<div class="page-head"><div><div class="page-title">Overview</div><div class="page-sub">'+fl.esc((ctx.project&&((ctx.project.org_slug?ctx.project.org_slug+' / ':'')+ctx.project.slug))||'project')+' · Last run '+fl.rel(L.created_at)+'</div></div></div>';
+
+  // quick start one-liner card — always shown at top
+  h+=quickStartCard(tok||'fl_YOUR_TOKEN');
+
+  // hero score card — resilience donut + 7-day trend (calm, two columns)
+  h+='<div class="card glow card-pad hairline" style="display:flex;align-items:center;gap:32px;flex-wrap:wrap">'+
+     '<div class="ring-wrap">'+fl.ring(score,76)+'<div class="ring-text">'+score+'%</div></div>'+
+     '<div style="min-width:150px"><div class="page-sub" style="text-transform:uppercase;letter-spacing:.06em;font-weight:600">Resilience score</div>'+
+       '<div style="font-size:32px;font-weight:700;letter-spacing:-.02em;line-height:1.1;margin-top:2px">'+score+'<span class="muted" style="font-size:16px;font-weight:400">%</span></div>'+
+       '<div class="cy" style="font-family:var(--mono);font-size:12px;margin-top:4px">'+(delta>=0?'↑ +':'↓ ')+delta+' this week</div></div>'+
+     '<div style="width:1px;align-self:stretch;background:var(--border)"></div>'+
+     '<div style="min-width:150px"><div class="page-sub" style="text-transform:uppercase;letter-spacing:.06em;font-weight:600;margin-bottom:8px">7-day trend</div>'+
+       fl.sparkline(last7,'#38BDF8',150,38)+'<div class="muted" style="font-size:11px;margin-top:4px">'+Math.round(ov.prevScore)+'% → '+score+'%</div></div>'+
+     '</div>';
+
+  // metric cards — four clean tiles with sparklines
+  h+='<div class="metric-row">'+
+     metric('Silent failures caught', ov.silentCaught, 'am', fl.sparkline(spread(ov.runs,'silent_count'),'#F59E0B'), 'across recent runs')+
+     metric('Agents monitored', ov.agentCount, '', barspark(), 'in this project')+
+     metric('Last run', fl.rel(L.created_at).replace(' ago',''), 'cy', fl.sparkline(last7,'#38BDF8'), 'ago · '+(L.assertions_total||0)+' assertions')+
+     metric('Open regressions', ov.openRegs.length, ov.openRegs.length?'am':'', regspark(ov.openRegs.length), reg?(fl.esc(reg.fault)+' · '+fl.rel(reg.detected_at).replace(' ago','')+' open'):'none open')+
+     '</div>';
+
+  // chart
+  h+='<div class="card glow hairline"><div class="card-head"><div><div class="card-title">Resilience over time</div>'+
+     '<div class="card-meta">Daily score · fault injection test suite</div></div>'+
+     '<div class="pill-tabs" id="chartPills"><span class="pill-tab" onclick="flSetChart(30,this)">30d</span><span class="pill-tab active" onclick="flSetChart(90,this)">90d</span><span class="pill-tab" onclick="flSetChart(365,this)">1yr</span></div></div>'+
+     '<div class="card-pad" id="chartBox">'+chart(filterRuns(ov.runs,90), ov.openRegs)+'</div></div>';
+
+  // recent runs table — clean, matches the gold mockup
+  h+='<div class="card glow hairline"><div class="card-head"><div><div class="card-title">Recent runs</div>'+
+     '<div class="card-meta">Fault injection test results · sorted by recency</div></div>'+
+     '<a class="btn ghost sm" href="runs.html">View all runs →</a></div><table><thead><tr>'+
+     '<th>Agent</th><th>Fault injected</th><th>Assertions</th><th>Verdict</th><th>Duration</th><th>When</th></tr></thead><tbody>';
+  (ov.recent||[]).forEach(function(r){
+    var v=fl.runVerdict(r), nm=r.agent_name||'agent';
+    var fault=(v==='fail')?(reg&&reg.fault||'wrong-number'):'none';
+    var dur=r.duration_ms?(r.duration_ms/1000).toFixed(1)+'s':'—';
+    var href='run.html?run='+encodeURIComponent(String(r.id||''));
+    h+='<tr onclick="location.href=\''+href+'\'">'+
+      '<td><div class="cell-agent">'+
+        '<div class="agent-ic '+fl.agentColor(nm)+'">'+fl.esc(nm[0].toUpperCase())+'</div>'+
+        '<div><div class="agent-nm">'+fl.esc(nm)+'</div>'+
+        '<div class="agent-rid">#'+fl.esc((r.git_sha||r.id||'').slice(0,6))+'</div></div></div></td>'+
+      '<td>'+(fault==='none'?'<span class="muted" style="font-size:11.5px">—</span>':'<span class="fault-tag">'+fl.esc(fault)+'</span>')+'</td>'+
+      '<td class="mono muted">'+(r.assertions_passed||0)+' / '+(r.assertions_total||0)+'</td>'+
+      '<td><span class="verdict '+v+'">'+fl.verdictLabel(v)+'</span></td>'+
+      '<td class="mono muted">'+dur+'</td>'+
+      '<td class="when">'+fl.rel(r.created_at)+'</td></tr>';
+  });
+  h+='</tbody></table></div></div>';
+  return h;
+}
+
+function metric(lbl,val,cls,spark,sub){
+  return '<div class="metric hairline"><div class="lbl">'+fl.esc(lbl)+'</div>'+
+    '<div class="metric-row2"><div class="val '+cls+'">'+val+'</div>'+spark+'</div>'+
+    '<div class="sub">'+sub+'</div></div>';
+}
+function spread(runs,key){ var a=runs.slice(-8).map(function(r){return +r[key]||0;}); return a.length>1?a:[0,1,1,2,2,3]; }
+function barspark(){ return '<svg class="spark" viewBox="0 0 62 26" fill="none"><g fill="#3B82F6" opacity=".5"><rect x="2" y="14" width="5" height="11" rx="1.5"/><rect x="11" y="10" width="5" height="15" rx="1.5"/><rect x="20" y="13" width="5" height="12" rx="1.5"/><rect x="29" y="8" width="5" height="17" rx="1.5"/><rect x="38" y="11" width="5" height="14" rx="1.5"/><rect x="47" y="6" width="5" height="19" rx="1.5"/><rect x="56" y="10" width="5" height="15" rx="1.5"/></g></svg>'; }
+function regspark(n){ var c=n?'#F59E0B':'#828A9A'; return '<svg class="spark" viewBox="0 0 62 26" fill="none"><path d="M1 20 L12 19 L20 18 L27 '+(n?'5':'17')+' L33 '+(n?'3':'16')+' L40 13 L50 15 L61 14" stroke="'+c+'" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity=".85"/></svg>'; }
+
+function filterRuns(runs, days){ if(days>=365) return runs; var cut=Date.now()-days*864e5; return runs.filter(function(r){return new Date(r.created_at).getTime()>=cut;}); }
+function flSetChart(days, el){
+  document.querySelectorAll('#chartPills .pill-tab').forEach(function(p){ p.classList.toggle('active', p===el); });
+  var ov=window._flOv||{runs:[],openRegs:[]};
+  var box=document.getElementById('chartBox'); if(box) box.innerHTML=chart(filterRuns(ov.runs,days), ov.openRegs);
+}
+function chart(runs, regs){
+  var W=920,H=200,pl=44,pr=14,pt=18,pb=26, x0=pl,x1=W-pr,y0=pt,y1=H-pb;
+  if(runs.length<2) return '<div class="muted" style="padding:30px;text-align:center">Resilience trend appears after a few runs.</div>';
+  var pts=runs.map(function(r,i){ return [ x0+(i/(runs.length-1))*(x1-x0), y1-(+r.resilience/100)*(y1-y0) ]; });
+  var line=pts.map(function(p,i){return (i?'L':'M')+p[0].toFixed(1)+' '+p[1].toFixed(1);}).join(' ');
+  var area=line+' L'+x1+' '+y1+' L'+x0+' '+y1+' Z';
+  var grid='';[0,25,50,75,100].forEach(function(v){ var y=y1-(v/100)*(y1-y0); grid+='<line x1="'+x0+'" y1="'+y+'" x2="'+x1+'" y2="'+y+'" stroke="#1B1E27" stroke-width="'+(v===0?1:.5)+'"/><text x="'+(x0-8)+'" y="'+(y+3)+'" font-family="JetBrains Mono" font-size="9.5" fill="#828A9A" text-anchor="end">'+v+'</text>'; });
+  var xlabs='', nlab=Math.min(4,runs.length); for(var k=0;k<nlab;k++){ var ix=Math.round(k*(runs.length-1)/(nlab-1)); var px=x0+(ix/(runs.length-1))*(x1-x0); var anc=k===0?'start':(k===nlab-1?'end':'middle'); var lab=new Date(runs[ix].created_at).toLocaleDateString('en-US',{month:'short',day:'numeric'}); xlabs+='<text x="'+px.toFixed(1)+'" y="'+(H-7)+'" font-family="JetBrains Mono" font-size="9.5" fill="#828A9A" text-anchor="'+anc+'">'+lab+'</text>'; }
+  var marks='';(regs||[]).forEach(function(rg){ var idx=-1; for(var i=0;i<runs.length;i++){ if(new Date(runs[i].created_at)>=new Date(rg.detected_at)){ idx=i; break; } } if(idx<0) return; var p=pts[idx]; marks+='<line x1="'+p[0]+'" y1="'+y0+'" x2="'+p[0]+'" y2="'+y1+'" stroke="rgba(245,158,11,.25)" stroke-width="1" stroke-dasharray="3,3"/><circle cx="'+p[0]+'" cy="'+p[1]+'" r="4" fill="rgba(245,158,11,.15)" stroke="#F59E0B" stroke-width="1.5"/>'; });
+  var end=pts[pts.length-1];
+  return '<svg width="100%" viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="xMidYMid meet" style="overflow:visible">'+
+    '<defs><linearGradient id="ag" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3B82F6" stop-opacity=".22"/><stop offset="1" stop-color="#3B82F6" stop-opacity="0"/></linearGradient></defs>'+
+    grid+xlabs+'<path d="'+area+'" fill="url(#ag)"/><path d="'+line+'" stroke="#3B82F6" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round" style="filter:drop-shadow(0 0 3px rgba(59,130,246,.6))"/>'+
+    marks+'<circle cx="'+end[0]+'" cy="'+end[1]+'" r="5" fill="rgba(56,189,248,.2)" stroke="#38BDF8" stroke-width="1.5"/><circle cx="'+end[0]+'" cy="'+end[1]+'" r="2.5" fill="#38BDF8"/></svg>';
+}
+
+// Shared "how to use faultline" walkthrough — empty-state on overview + getting-started.html
+function gettingStartedPanel(){
+  function step(n,title,desc,code){
+    return '<div class="gs-step"><div class="gs-num">'+n+'</div><div class="gs-body">'+
+      '<div class="gs-title">'+title+'</div><div class="gs-desc">'+desc+'</div>'+
+      (code?('<div class="code" data-c="'+fl.esc(code.replace(/<[^>]+>/g,''))+'"><button class="copy-btn" onclick="fl.copy(this.parentElement.dataset.c,this)">Copy</button>'+code+'</div>'):'')+
+      '</div></div>';
+  }
+  return '<div class="card glow hairline">'+
+    '<div class="card-head"><div><div class="card-title">Getting started</div>'+
+      '<div class="card-meta">Wire faultline into your agent in four steps — most teams are catching real bugs in under ten minutes</div></div></div>'+
+    '<div class="gs-steps">'+
+      step('1','Create a project','You already have one. Each project holds your agents, runs, and CI tokens. Switch or add projects from the top-left selector.','')+
+      step('2','Write a check (or wrap your agent)','Install the package and describe one behavioral rule your agent must never break. faultline injects faults around it and watches for silent-wrong answers.','<span class="cmt"># install</span>\npip install faultline\n\n<span class="cmt"># faultline_suite.py — one rule your agent must hold</span>\nfrom faultline import chaos, WrongNumber\n\nresult = chaos(agent, task, oracle, faults=[WrongNumber(targets=["inventory"])])')+
+      step('3','Run it in CI with your token','Mint a token under Settings → Tokens, set it as a secret, and push run results here on every commit.','<span class="cmt"># in your CI pipeline</span>\nexport FAULTLINE_TOKEN=fl_••••\nfaultline run faultline_suite.py --push')+
+      step('4','Watch resilience + catches here','Each push updates your resilience score and surfaces any silent failure, regression, or mined-rule violation — before it reaches production.','')+
+    '</div>'+
+    '<div class="card-pad" style="border-top:1px solid var(--border);display:flex;gap:10px;align-items:center;flex-wrap:wrap">'+
+      '<a class="btn pri" href="integrations.html">Set up CI →</a>'+
+      '<a class="btn ghost" href="settings.html?tab=tokens">Create a token</a>'+
+      '<span class="listen" style="margin-left:auto"><span class="status-dot"></span> Listening for your first run…</span>'+
+    '</div></div>';
+}
+</script>
+</body>
+</html>

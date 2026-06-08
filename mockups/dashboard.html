@@ -1,0 +1,1341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>faultline — Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:        #08090D;
+    --panel:     #0D0F15;
+    --panel2:    #11141C;
+    --accent:    #3B82F6;
+    --cyan:      #38BDF8;
+    --indigo:    #818CF8;
+    --text:      #EAEEF6;
+    --muted:     #828A9A;
+    --border:    #1B1E27;
+    --fail:      #F59E0B;
+    --crash:     #6B7280;
+    --font-ui:   'Inter', system-ui, sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+    --radius:    10px;
+    --radius-sm: 6px;
+    --shadow-panel: 0 1px 0 rgba(255,255,255,.03) inset, 0 4px 24px rgba(0,0,0,.5);
+    --shadow-card:  0 1px 0 rgba(255,255,255,.04) inset, 0 8px 32px rgba(0,0,0,.6);
+  }
+
+  html, body {
+    width: 100%; height: 100%;
+    background: var(--bg);
+    font-family: var(--font-ui);
+    color: var(--text);
+    font-size: 13px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    overflow: hidden;
+  }
+
+  /* ─── LAYOUT SHELL ────────────────────────────────────────────────── */
+  .app {
+    display: grid;
+    grid-template-columns: 220px 1fr;
+    grid-template-rows: 52px 1fr;
+    width: 1240px;
+    height: 780px;
+    margin: 0 auto;
+    position: relative;
+  }
+
+  /* ─── TOP GLOW ────────────────────────────────────────────────────── */
+  .app::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 50%;
+    transform: translateX(-50%);
+    width: 600px; height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(59,130,246,.3), transparent);
+    z-index: 100;
+    pointer-events: none;
+  }
+  .app::after {
+    content: '';
+    position: absolute;
+    top: 0; left: 50%;
+    transform: translateX(-50%);
+    width: 400px; height: 120px;
+    background: radial-gradient(ellipse at top, rgba(45,126,248,.06) 0%, transparent 70%);
+    z-index: 99;
+    pointer-events: none;
+  }
+
+  /* ─── SIDEBAR ─────────────────────────────────────────────────────── */
+  .sidebar {
+    grid-row: 1 / -1;
+    background: var(--panel);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    box-shadow: var(--shadow-panel);
+    position: relative;
+    z-index: 10;
+  }
+
+  .sidebar-logo {
+    height: 52px;
+    display: flex;
+    align-items: center;
+    padding: 0 18px;
+    border-bottom: 1px solid var(--border);
+    gap: 10px;
+    flex-shrink: 0;
+  }
+
+  .logo-glyph {
+    width: 26px;
+    height: 26px;
+    flex-shrink: 0;
+  }
+
+  .logo-wordmark {
+    font-family: var(--font-ui);
+    font-weight: 600;
+    font-size: 15px;
+    letter-spacing: -.3px;
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    gap: 0;
+  }
+  .logo-wordmark span {
+    color: var(--cyan);
+  }
+
+  .sidebar-nav {
+    flex: 1;
+    padding: 12px 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .nav-label {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: .8px;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding: 8px 8px 4px;
+    opacity: .6;
+  }
+
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 7px 10px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    color: var(--muted);
+    font-size: 13px;
+    font-weight: 450;
+    transition: background .12s, color .12s;
+    position: relative;
+    user-select: none;
+  }
+  .nav-item:hover {
+    background: rgba(255,255,255,.04);
+    color: var(--text);
+  }
+  .nav-item.active {
+    background: rgba(45,126,248,.12);
+    color: var(--text);
+  }
+  .nav-item.active::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 50%; transform: translateY(-50%);
+    width: 2px; height: 16px;
+    background: var(--accent);
+    border-radius: 2px;
+  }
+  .nav-item .nav-icon {
+    width: 15px;
+    height: 15px;
+    opacity: .7;
+    flex-shrink: 0;
+  }
+  .nav-item.active .nav-icon { opacity: 1; }
+
+  .nav-badge {
+    margin-left: auto;
+    background: rgba(201,138,43,.2);
+    color: var(--fail);
+    font-family: var(--font-mono);
+    font-size: 10px;
+    padding: 1px 6px;
+    border-radius: 20px;
+    border: 1px solid rgba(201,138,43,.25);
+  }
+
+  .sidebar-footer {
+    padding: 12px 10px 14px;
+    border-top: 1px solid var(--border);
+  }
+
+  .status-chip {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 7px 10px;
+    border-radius: var(--radius-sm);
+    background: rgba(70,224,255,.06);
+    border: 1px solid rgba(70,224,255,.12);
+    font-size: 12px;
+    color: var(--cyan);
+    font-weight: 450;
+  }
+  .status-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--cyan);
+    box-shadow: 0 0 6px var(--cyan);
+    animation: pulse-dot 2.4s ease-in-out infinite;
+    flex-shrink: 0;
+  }
+  @keyframes pulse-dot {
+    0%, 100% { opacity: 1; box-shadow: 0 0 6px var(--cyan); }
+    50%       { opacity: .7; box-shadow: 0 0 12px var(--cyan); }
+  }
+
+  /* ─── TOPBAR ──────────────────────────────────────────────────────── */
+  .topbar {
+    grid-column: 2;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0 24px;
+    border-bottom: 1px solid var(--border);
+    background: var(--panel);
+    box-shadow: var(--shadow-panel);
+    position: relative;
+    z-index: 9;
+  }
+
+  .project-switcher {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 5px 10px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    background: rgba(255,255,255,.03);
+    cursor: pointer;
+    font-size: 12.5px;
+    font-weight: 500;
+    color: var(--text);
+    white-space: nowrap;
+    transition: border-color .12s, background .12s;
+  }
+  .project-switcher:hover {
+    border-color: rgba(255,255,255,.12);
+    background: rgba(255,255,255,.05);
+  }
+  .project-dot {
+    width: 8px; height: 8px;
+    border-radius: 2px;
+    background: linear-gradient(135deg, var(--accent), var(--indigo));
+    flex-shrink: 0;
+  }
+  .project-caret {
+    color: var(--muted);
+    font-size: 10px;
+    margin-left: 2px;
+  }
+
+  .topbar-divider {
+    width: 1px;
+    height: 20px;
+    background: var(--border);
+    flex-shrink: 0;
+  }
+
+  .search-field {
+    flex: 1;
+    max-width: 280px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 12px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    background: rgba(255,255,255,.025);
+    color: var(--muted);
+    font-size: 12.5px;
+    font-family: var(--font-ui);
+    cursor: text;
+  }
+  .search-field svg { flex-shrink: 0; opacity: .5; }
+  .search-kbd {
+    margin-left: auto;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--muted);
+    background: rgba(255,255,255,.05);
+    padding: 1px 5px;
+    border-radius: 4px;
+    border: 1px solid rgba(255,255,255,.08);
+    opacity: .7;
+  }
+
+  .topbar-spacer { flex: 1; }
+
+  .run-check-btn {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 6px 14px;
+    border-radius: var(--radius-sm);
+    background: linear-gradient(135deg, var(--accent) 0%, #1B5FD4 100%);
+    border: none;
+    color: #fff;
+    font-family: var(--font-ui);
+    font-size: 12.5px;
+    font-weight: 550;
+    cursor: pointer;
+    box-shadow: 0 1px 0 rgba(255,255,255,.12) inset, 0 4px 12px rgba(45,126,248,.35);
+    letter-spacing: .01em;
+    white-space: nowrap;
+  }
+
+  .avatar {
+    width: 30px; height: 30px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--indigo), var(--accent));
+    border: 1.5px solid rgba(255,255,255,.12);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 600;
+    color: #fff;
+    flex-shrink: 0;
+  }
+
+  /* ─── MAIN CONTENT ────────────────────────────────────────────────── */
+  .main {
+    grid-column: 2;
+    background: var(--bg);
+    overflow-y: auto;
+    padding: 28px 28px 32px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  /* Scrollbar */
+  .main::-webkit-scrollbar { width: 4px; }
+  .main::-webkit-scrollbar-track { background: transparent; }
+  .main::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+  /* ─── PAGE HEADER ─────────────────────────────────────────────────── */
+  .page-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 24px;
+  }
+
+  .page-title-block { display: flex; flex-direction: column; gap: 4px; }
+  .page-title {
+    font-size: 18px;
+    font-weight: 600;
+    letter-spacing: -.3px;
+    color: var(--text);
+  }
+  .page-subtitle {
+    font-size: 12.5px;
+    color: var(--muted);
+    font-weight: 400;
+  }
+
+  /* ─── HERO METRIC ─────────────────────────────────────────────────── */
+  .hero-section {
+    display: flex;
+    align-items: center;
+    gap: 28px;
+  }
+
+  .hero-score-card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 22px 28px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    box-shadow: var(--shadow-card);
+    flex-shrink: 0;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero-score-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(70,224,255,.3), transparent);
+  }
+
+  .score-ring-wrap {
+    position: relative;
+    width: 72px; height: 72px;
+    flex-shrink: 0;
+  }
+  .score-ring-wrap svg { position: absolute; top: 0; left: 0; }
+  .score-center-text {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-mono);
+    font-weight: 600;
+    font-size: 17px;
+    color: var(--text);
+  }
+
+  .score-meta { display: flex; flex-direction: column; gap: 3px; }
+  .score-label {
+    font-size: 11.5px;
+    text-transform: uppercase;
+    letter-spacing: .6px;
+    font-weight: 600;
+    color: var(--muted);
+  }
+  .score-title {
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: -.4px;
+    color: var(--text);
+    font-family: var(--font-ui);
+  }
+  .score-delta {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-family: var(--font-mono);
+    font-size: 11.5px;
+    color: var(--cyan);
+    margin-top: 2px;
+  }
+  .score-delta svg { opacity: .9; }
+
+  /* ─── METRIC CARDS ROW ────────────────────────────────────────────── */
+  .metric-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+  }
+
+  .metric-card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    box-shadow: var(--shadow-panel);
+    position: relative;
+    overflow: hidden;
+  }
+  .metric-card::after {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,.05), transparent);
+  }
+
+  .metric-card-label {
+    font-size: 11.5px;
+    color: var(--muted);
+    font-weight: 500;
+    letter-spacing: .01em;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .metric-card-label svg { opacity: .6; }
+
+  .metric-card-value {
+    font-family: var(--font-mono);
+    font-size: 26px;
+    font-weight: 600;
+    letter-spacing: -.5px;
+    color: var(--text);
+    line-height: 1;
+  }
+  .metric-card-value.accent { color: var(--cyan); }
+  .metric-card-value.fail   { color: var(--fail); }
+  .metric-card-value.muted  { color: var(--muted); }
+
+  .metric-card-sub {
+    font-size: 11px;
+    color: var(--muted);
+    font-weight: 400;
+    opacity: .8;
+  }
+  .metric-card-row { display:flex; align-items:flex-end; justify-content:space-between; gap:10px; }
+  .spark { flex:none; width:62px; height:26px; overflow:visible; }
+
+  /* ─── CHART CARD ──────────────────────────────────────────────────── */
+  .chart-card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px 22px 18px;
+    box-shadow: var(--shadow-card);
+    position: relative;
+    overflow: hidden;
+  }
+  .chart-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(45,126,248,.25), rgba(70,224,255,.2), transparent);
+  }
+
+  .chart-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 18px;
+    gap: 16px;
+  }
+  .chart-title-group { display: flex; flex-direction: column; gap: 3px; }
+  .chart-title {
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: -.2px;
+    color: var(--text);
+  }
+  .chart-subtitle {
+    font-size: 11.5px;
+    color: var(--muted);
+  }
+
+  .chart-legend {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-shrink: 0;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11.5px;
+    color: var(--muted);
+  }
+  .legend-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .legend-line {
+    width: 14px; height: 1.5px;
+    border-radius: 2px;
+    flex-shrink: 0;
+  }
+
+  .chart-time-pills {
+    display: flex;
+    gap: 2px;
+  }
+  .time-pill {
+    padding: 3px 9px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--muted);
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: all .12s;
+  }
+  .time-pill.active {
+    background: rgba(45,126,248,.15);
+    border-color: rgba(45,126,248,.3);
+    color: var(--accent);
+  }
+  .time-pill:hover:not(.active) {
+    background: rgba(255,255,255,.04);
+    color: var(--text);
+  }
+
+  .chart-svg-wrap {
+    width: 100%;
+    position: relative;
+  }
+
+  /* ─── TABLE CARD ──────────────────────────────────────────────────── */
+  .table-card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-panel);
+    overflow: hidden;
+    position: relative;
+  }
+  .table-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,.04), transparent);
+  }
+
+  .table-header-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px 14px;
+    border-bottom: 1px solid var(--border);
+    gap: 12px;
+  }
+  .table-title {
+    font-size: 13.5px;
+    font-weight: 600;
+    letter-spacing: -.2px;
+    color: var(--text);
+  }
+  .table-meta {
+    font-size: 11.5px;
+    color: var(--muted);
+    margin-top: 1px;
+  }
+  .view-all-link {
+    font-size: 11.5px;
+    color: var(--accent);
+    cursor: pointer;
+    opacity: .8;
+    font-weight: 500;
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    gap: 3px;
+  }
+  .view-all-link:hover { opacity: 1; }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  thead th {
+    padding: 9px 20px;
+    text-align: left;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .6px;
+    text-transform: uppercase;
+    color: var(--muted);
+    border-bottom: 1px solid var(--border);
+    background: rgba(255,255,255,.015);
+    white-space: nowrap;
+  }
+  thead th:last-child { text-align: right; }
+
+  tbody tr {
+    border-bottom: 1px solid rgba(28,35,51,.8);
+    transition: background .1s;
+    cursor: pointer;
+  }
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:hover { background: rgba(255,255,255,.025); }
+
+  tbody td {
+    padding: 12px 20px;
+    font-size: 12.5px;
+    color: var(--text);
+    vertical-align: middle;
+  }
+  tbody td:last-child { text-align: right; }
+
+  .agent-cell {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .agent-icon {
+    width: 28px; height: 28px;
+    border-radius: 7px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  .agent-icon.blue   { background: rgba(45,126,248,.15); color: var(--accent); border: 1px solid rgba(45,126,248,.2); }
+  .agent-icon.indigo { background: rgba(107,79,255,.15); color: var(--indigo); border: 1px solid rgba(107,79,255,.2); }
+  .agent-icon.cyan   { background: rgba(70,224,255,.12); color: var(--cyan);   border: 1px solid rgba(70,224,255,.18); }
+  .agent-icon.amber  { background: rgba(201,138,43,.12); color: var(--fail);   border: 1px solid rgba(201,138,43,.18); }
+
+  .agent-name  { font-weight: 500; font-size: 12.5px; }
+  .agent-desc  { font-size: 11px; color: var(--muted); }
+
+  .fault-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 4px;
+    background: rgba(255,255,255,.04);
+    border: 1px solid rgba(255,255,255,.06);
+    color: var(--muted);
+    white-space: nowrap;
+  }
+
+  .verdict-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .3px;
+    text-transform: uppercase;
+    padding: 3px 9px;
+    border-radius: 20px;
+    white-space: nowrap;
+  }
+  .verdict-pill.pass {
+    background: rgba(70,224,255,.1);
+    color: var(--cyan);
+    border: 1px solid rgba(70,224,255,.2);
+  }
+  .verdict-pill.fail {
+    background: rgba(201,138,43,.12);
+    color: var(--fail);
+    border: 1px solid rgba(201,138,43,.22);
+  }
+  .verdict-pill.crash {
+    background: rgba(74,85,104,.2);
+    color: var(--crash);
+    border: 1px solid rgba(74,85,104,.3);
+  }
+  .verdict-pill::before {
+    content: '';
+    width: 5px; height: 5px;
+    border-radius: 50%;
+    background: currentColor;
+    flex-shrink: 0;
+  }
+
+  .when-cell {
+    font-family: var(--font-mono);
+    font-size: 11.5px;
+    color: var(--muted);
+  }
+
+  .run-id {
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    color: var(--muted);
+    opacity: .6;
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- ═══ SIDEBAR ══════════════════════════════════════════════════════ -->
+  <aside class="sidebar">
+
+    <!-- Logo -->
+    <div class="sidebar-logo">
+      <svg class="logo-glyph" viewBox="0 0 26 26" fill="none">
+        <!-- Fault-line glyph: two tectonic plates with a diagonal crack -->
+        <rect width="26" height="26" rx="6" fill="rgba(45,126,248,0.1)"/>
+        <!-- Upper-left plate -->
+        <path d="M4 8 L13 8 L10 18 L4 18 Z" fill="none" stroke="rgba(70,224,255,0.5)" stroke-width="1"/>
+        <path d="M6 10 L11 10 M5 13 L10 13 M5 16 L9 16" stroke="rgba(70,224,255,0.3)" stroke-width=".75" stroke-linecap="round"/>
+        <!-- Fault line -->
+        <path d="M13 4 L10 13 L13 13 L10 22" stroke="#46E0FF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        <!-- Lower-right plate -->
+        <path d="M13 8 L22 8 L22 18 L16 18 Z" fill="none" stroke="rgba(107,79,255,0.5)" stroke-width="1"/>
+        <path d="M15 10 L20 10 M16 13 L21 13 M17 16 L21 16" stroke="rgba(107,79,255,0.3)" stroke-width=".75" stroke-linecap="round"/>
+        <!-- Impact dot on fault -->
+        <circle cx="10" cy="13" r="1.5" fill="#46E0FF"/>
+      </svg>
+      <span class="logo-wordmark">fault<span>line</span></span>
+    </div>
+
+    <!-- Nav -->
+    <nav class="sidebar-nav">
+      <div class="nav-label">Workspace</div>
+
+      <div class="nav-item active">
+        <svg class="nav-icon" viewBox="0 0 15 15" fill="none">
+          <rect x="2" y="2" width="4.5" height="4.5" rx="1" stroke="currentColor" stroke-width="1.2"/>
+          <rect x="8.5" y="2" width="4.5" height="4.5" rx="1" stroke="currentColor" stroke-width="1.2"/>
+          <rect x="2" y="8.5" width="4.5" height="4.5" rx="1" stroke="currentColor" stroke-width="1.2"/>
+          <rect x="8.5" y="8.5" width="4.5" height="4.5" rx="1" stroke="currentColor" stroke-width="1.2"/>
+        </svg>
+        Overview
+      </div>
+
+      <div class="nav-item">
+        <svg class="nav-icon" viewBox="0 0 15 15" fill="none">
+          <circle cx="7.5" cy="7.5" r="5" stroke="currentColor" stroke-width="1.2"/>
+          <path d="M7.5 5V7.5L9.5 9.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+          <circle cx="7.5" cy="2.5" r=".75" fill="currentColor"/>
+        </svg>
+        Agents
+      </div>
+
+      <div class="nav-item">
+        <svg class="nav-icon" viewBox="0 0 15 15" fill="none">
+          <path d="M2 11L5 8L7.5 10.5L11 6L13 8" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+          <rect x="1.5" y="2" width="12" height="11" rx="1.5" stroke="currentColor" stroke-width="1.2"/>
+        </svg>
+        Runs
+      </div>
+
+      <div class="nav-item">
+        <svg class="nav-icon" viewBox="0 0 15 15" fill="none">
+          <path d="M7.5 2L8.9 5.6H12.8L9.7 7.9L10.8 11.5L7.5 9.2L4.2 11.5L5.3 7.9L2.2 5.6H6.1Z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/>
+        </svg>
+        Faults
+        <span class="nav-badge">1</span>
+      </div>
+
+      <div class="nav-label" style="margin-top:6px">Config</div>
+
+      <div class="nav-item">
+        <svg class="nav-icon" viewBox="0 0 15 15" fill="none">
+          <path d="M2 4H13M2 7.5H13M2 11H8" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+          <circle cx="11" cy="11" r="2" stroke="currentColor" stroke-width="1.2"/>
+          <path d="M12.4 12.4L14 14" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+        </svg>
+        Integrations
+      </div>
+
+      <div class="nav-item">
+        <svg class="nav-icon" viewBox="0 0 15 15" fill="none">
+          <circle cx="7.5" cy="5" r="2" stroke="currentColor" stroke-width="1.2"/>
+          <path d="M3 13c0-2.5 2-4 4.5-4s4.5 1.5 4.5 4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+        </svg>
+        Settings
+      </div>
+    </nav>
+
+    <!-- Footer status -->
+    <div class="sidebar-footer">
+      <div class="status-chip">
+        <div class="status-dot"></div>
+        All systems nominal
+      </div>
+    </div>
+  </aside>
+
+  <!-- ═══ TOPBAR ════════════════════════════════════════════════════════ -->
+  <header class="topbar">
+    <!-- Project switcher -->
+    <div class="project-switcher">
+      <div class="project-dot"></div>
+      acme / support-agent
+      <span class="project-caret">▾</span>
+    </div>
+
+    <div class="topbar-divider"></div>
+
+    <!-- Search -->
+    <div class="search-field">
+      <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+        <circle cx="5.5" cy="5.5" r="4" stroke="currentColor" stroke-width="1.3"/>
+        <path d="M8.5 8.5L11.5 11.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+      </svg>
+      Search runs, agents, faults…
+      <span class="search-kbd">⌘K</span>
+    </div>
+
+    <div class="topbar-spacer"></div>
+
+    <!-- Run check button -->
+    <button class="run-check-btn">
+      <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+        <circle cx="6" cy="6" r="4.5" stroke="rgba(255,255,255,.6)" stroke-width="1.2"/>
+        <path d="M4.5 6a1.5 1.5 0 103 0" stroke="rgba(255,255,255,.9)" stroke-width="1.3" stroke-linecap="round"/>
+        <path d="M7.5 6L9.5 6M8.5 5L9.5 6L8.5 7" stroke="rgba(255,255,255,.9)" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      Run check
+    </button>
+
+    <!-- Avatar -->
+    <div class="avatar">AG</div>
+  </header>
+
+  <!-- ═══ MAIN CONTENT ══════════════════════════════════════════════════ -->
+  <main class="main">
+
+    <!-- Page header -->
+    <div class="page-header">
+      <div class="page-title-block">
+        <div class="page-title">Overview</div>
+        <div class="page-subtitle">acme / support-agent · Last sync 2m ago</div>
+      </div>
+    </div>
+
+    <!-- ── HERO + METRIC CARDS ── -->
+    <div style="display:flex; flex-direction:column; gap:12px;">
+
+      <!-- Hero resilience score -->
+      <div class="hero-score-card" style="display:inline-flex; align-self:stretch;">
+        <!-- Score ring -->
+        <div class="score-ring-wrap">
+          <svg width="72" height="72" viewBox="0 0 72 72">
+            <defs>
+              <linearGradient id="ringGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#46E0FF"/>
+                <stop offset="100%" stop-color="#2D7EF8"/>
+              </linearGradient>
+            </defs>
+            <!-- BG ring -->
+            <circle cx="36" cy="36" r="29" fill="none" stroke="#1C2333" stroke-width="5"/>
+            <!-- Progress: 87% of 2π×29 = 158.6; full=182.2 -->
+            <circle cx="36" cy="36" r="29" fill="none"
+              stroke="url(#ringGrad)"
+              stroke-width="5"
+              stroke-linecap="round"
+              stroke-dasharray="158.5 182.2"
+              stroke-dashoffset="0"
+              transform="rotate(-90 36 36)"
+              style="filter: drop-shadow(0 0 4px rgba(70,224,255,.5))"/>
+          </svg>
+          <div class="score-center-text">87%</div>
+        </div>
+
+        <!-- Score text -->
+        <div class="score-meta">
+          <div class="score-label">Resilience score</div>
+          <div class="score-title">87<span style="font-size:14px;color:var(--muted);font-weight:400">%</span></div>
+          <div class="score-delta">
+            <svg width="11" height="11" viewBox="0 0 11 11" fill="none">
+              <path d="M5.5 9V2M2 5.5L5.5 2L9 5.5" stroke="#46E0FF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            +4 this week
+          </div>
+        </div>
+
+        <!-- Vertical divider -->
+        <div style="width:1px; background:var(--border); margin:0 8px; align-self:stretch;"></div>
+
+        <!-- Sparkline context -->
+        <div style="display:flex; flex-direction:column; justify-content:center; gap:6px; min-width:120px;">
+          <div style="font-size:11px; color:var(--muted); font-weight:500; letter-spacing:.4px; text-transform:uppercase;">7-day trend</div>
+          <svg width="120" height="32" viewBox="0 0 120 32">
+            <defs>
+              <linearGradient id="sparkGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#46E0FF" stop-opacity=".4"/>
+                <stop offset="100%" stop-color="#46E0FF" stop-opacity="0"/>
+              </linearGradient>
+            </defs>
+            <!-- Area fill -->
+            <path d="M0 28 L17 22 L34 18 L51 20 L68 14 L85 10 L102 8 L120 6 L120 32 L0 32 Z"
+              fill="url(#sparkGrad)"/>
+            <!-- Line -->
+            <path d="M0 28 L17 22 L34 18 L51 20 L68 14 L85 10 L102 8 L120 6"
+              stroke="#46E0FF" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"
+              style="filter: drop-shadow(0 0 3px rgba(70,224,255,.5))"/>
+            <!-- End dot -->
+            <circle cx="120" cy="6" r="3" fill="#46E0FF"/>
+          </svg>
+          <div style="font-size:10.5px; color:var(--muted);">83% → 87%</div>
+        </div>
+      </div>
+
+      <!-- Metric cards -->
+      <div class="metric-row">
+        <div class="metric-card">
+          <div class="metric-card-label">
+            <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+              <path d="M6.5 1.5L8 5H12L8.5 7.5L9.5 11L6.5 9L3.5 11L4.5 7.5L1 5H5Z" stroke="#46E0FF" stroke-width="1.1" stroke-linejoin="round"/>
+            </svg>
+            Silent failures caught
+          </div>
+          <div class="metric-card-row">
+            <div class="metric-card-value accent">23</div>
+            <svg class="spark" viewBox="0 0 62 26" fill="none"><defs><linearGradient id="sp1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#38BDF8" stop-opacity=".35"/><stop offset="1" stop-color="#38BDF8" stop-opacity="0"/></linearGradient></defs><path d="M1 21 L11 19 L21 20 L31 14 L41 13 L51 8 L61 4 L61 25 L1 25 Z" fill="url(#sp1)"/><path d="M1 21 L11 19 L21 20 L31 14 L41 13 L51 8 L61 4" stroke="#38BDF8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+          <div class="metric-card-sub">↑ 3 from last period</div>
+        </div>
+
+        <div class="metric-card">
+          <div class="metric-card-label">
+            <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+              <circle cx="6.5" cy="6.5" r="5" stroke="#8A93A6" stroke-width="1.1"/>
+              <circle cx="6.5" cy="6.5" r="2.5" stroke="#8A93A6" stroke-width="1.1"/>
+              <path d="M6.5 1.5V3.5M6.5 9.5V11.5M1.5 6.5H3.5M9.5 6.5H11.5" stroke="#8A93A6" stroke-width="1" stroke-linecap="round"/>
+            </svg>
+            Agents monitored
+          </div>
+          <div class="metric-card-row">
+            <div class="metric-card-value">6</div>
+            <svg class="spark" viewBox="0 0 62 26" fill="none"><g fill="#3B82F6" opacity=".5"><rect x="2" y="14" width="5" height="11" rx="1.5"/><rect x="11" y="10" width="5" height="15" rx="1.5"/><rect x="20" y="13" width="5" height="12" rx="1.5"/><rect x="29" y="8" width="5" height="17" rx="1.5"/><rect x="38" y="11" width="5" height="14" rx="1.5"/><rect x="47" y="6" width="5" height="19" rx="1.5"/><rect x="56" y="10" width="5" height="15" rx="1.5"/></g></svg>
+          </div>
+          <div class="metric-card-sub">Across 3 projects</div>
+        </div>
+
+        <div class="metric-card">
+          <div class="metric-card-label">
+            <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+              <circle cx="6.5" cy="6.5" r="5" stroke="#8A93A6" stroke-width="1.1"/>
+              <path d="M6.5 4V6.5L8.5 8" stroke="#8A93A6" stroke-width="1.1" stroke-linecap="round"/>
+            </svg>
+            Last run
+          </div>
+          <div class="metric-card-row">
+            <div class="metric-card-value" style="font-size:22px; color: var(--cyan);">2m</div>
+            <svg class="spark" viewBox="0 0 62 26" fill="none"><path d="M1 16 L9 15 L17 17 L25 12 L33 14 L41 9 L49 11 L61 6" stroke="#38BDF8" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity=".8"/><circle cx="61" cy="6" r="2" fill="#38BDF8"/></svg>
+          </div>
+          <div class="metric-card-sub">ago · 14 assertions</div>
+        </div>
+
+        <div class="metric-card">
+          <div class="metric-card-label">
+            <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+              <path d="M6.5 2V7L9.5 9" stroke="#C98A2B" stroke-width="1.1" stroke-linecap="round"/>
+              <circle cx="6.5" cy="6.5" r="5" stroke="#C98A2B" stroke-width="1.1"/>
+            </svg>
+            Open regressions
+          </div>
+          <div class="metric-card-row">
+            <div class="metric-card-value fail">1</div>
+            <svg class="spark" viewBox="0 0 62 26" fill="none"><path d="M1 20 L12 19 L20 18 L27 5 L33 3 L40 13 L50 15 L61 14" stroke="#F59E0B" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity=".85"/><circle cx="32" cy="3.5" r="2" fill="#F59E0B"/></svg>
+          </div>
+          <div class="metric-card-sub">wrong-number · 18m open</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── CHART CARD ── -->
+    <div class="chart-card">
+      <div class="chart-header">
+        <div>
+          <div style="display:flex; align-items:center; gap:12px;">
+            <div class="chart-title-group">
+              <div class="chart-title">Resilience over 90 days</div>
+              <div class="chart-subtitle">Daily score · fault injection test suite</div>
+            </div>
+            <div class="chart-legend">
+              <div class="legend-item">
+                <div class="legend-line" style="background:var(--accent);"></div>
+                Resilience
+              </div>
+              <div class="legend-item">
+                <div class="legend-dot" style="background:var(--fail);"></div>
+                Regression
+              </div>
+              <div class="legend-item">
+                <div class="legend-dot" style="background:var(--cyan);"></div>
+                Recovery
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="chart-time-pills">
+          <div class="time-pill">30d</div>
+          <div class="time-pill active">90d</div>
+          <div class="time-pill">1yr</div>
+        </div>
+      </div>
+
+      <!-- SVG Chart -->
+      <div class="chart-svg-wrap">
+        <svg width="100%" viewBox="0 0 920 200" preserveAspectRatio="xMidYMid meet" style="overflow:visible">
+          <defs>
+            <!-- Area gradient -->
+            <linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#2D7EF8" stop-opacity=".22"/>
+              <stop offset="60%" stop-color="#2D7EF8" stop-opacity=".06"/>
+              <stop offset="100%" stop-color="#2D7EF8" stop-opacity="0"/>
+            </linearGradient>
+            <!-- Cyan area for recovery segment -->
+            <linearGradient id="recoverGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#46E0FF" stop-opacity=".15"/>
+              <stop offset="100%" stop-color="#46E0FF" stop-opacity="0"/>
+            </linearGradient>
+            <!-- Line gradient -->
+            <linearGradient id="lineGrad" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%" stop-color="#2D7EF8"/>
+              <stop offset="60%" stop-color="#2D7EF8"/>
+              <stop offset="75%" stop-color="#6B4FFF"/>
+              <stop offset="100%" stop-color="#46E0FF"/>
+            </linearGradient>
+            <filter id="glow">
+              <feGaussianBlur stdDeviation="2.5" result="coloredBlur"/>
+              <feMerge>
+                <feMergeNode in="coloredBlur"/>
+                <feMergeNode in="SourceGraphic"/>
+              </feMerge>
+            </filter>
+          </defs>
+
+          <!-- Chart margins: top=20 bottom=30 left=48 right=20 -->
+          <!-- Plot area: x:48..900, y:20..170 -->
+          <!-- Y axis: 0..100 mapped to 170..20, so value V → y = 170 - (V/100)*150 -->
+          <!-- 90 data points, x spacing = 852/89 ≈ 9.57 -->
+
+          <!-- Grid lines (horizontal) -->
+          <line x1="48" y1="170" x2="900" y2="170" stroke="#1C2333" stroke-width="1"/>
+          <line x1="48" y1="132" x2="900" y2="132" stroke="#1C2333" stroke-width=".5"/>
+          <line x1="48" y1="95"  x2="900" y2="95"  stroke="#1C2333" stroke-width=".5"/>
+          <line x1="48" y1="57"  x2="900" y2="57"  stroke="#1C2333" stroke-width=".5"/>
+          <line x1="48" y1="20"  x2="900" y2="20"  stroke="#1C2333" stroke-width=".5"/>
+
+          <!-- Y-axis labels -->
+          <text x="40" y="174" font-family="JetBrains Mono,monospace" font-size="9.5" fill="#8A93A6" text-anchor="end">0</text>
+          <text x="40" y="136" font-family="JetBrains Mono,monospace" font-size="9.5" fill="#8A93A6" text-anchor="end">25</text>
+          <text x="40" y="99"  font-family="JetBrains Mono,monospace" font-size="9.5" fill="#8A93A6" text-anchor="end">50</text>
+          <text x="40" y="61"  font-family="JetBrains Mono,monospace" font-size="9.5" fill="#8A93A6" text-anchor="end">75</text>
+          <text x="40" y="24"  font-family="JetBrains Mono,monospace" font-size="9.5" fill="#8A93A6" text-anchor="end">100</text>
+
+          <!-- X axis month labels -->
+          <text x="48"  y="190" font-family="JetBrains Mono,monospace" font-size="9.5" fill="#8A93A6" text-anchor="middle">Mar</text>
+          <text x="238" y="190" font-family="JetBrains Mono,monospace" font-size="9.5" fill="#8A93A6" text-anchor="middle">Apr</text>
+          <text x="522" y="190" font-family="JetBrains Mono,monospace" font-size="9.5" fill="#8A93A6" text-anchor="middle">May</text>
+          <text x="806" y="190" font-family="JetBrains Mono,monospace" font-size="9.5" fill="#8A93A6" text-anchor="middle">Jun</text>
+          <text x="900" y="190" font-family="JetBrains Mono,monospace" font-size="9.5" fill="#8A93A6" text-anchor="middle">Today</text>
+
+          <!-- Main area path -->
+          <!-- Points: starts ~70, climbs to ~82, slight undulation, dips to ~45 at regression (~day 58), recovers to 87 -->
+          <path d="
+            M48,65
+            C65,62 80,60 95,58
+            C110,56 125,54 140,52
+            C155,50 165,49 180,48
+            C195,47 210,46 225,45
+            C238,44 250,43 260,43
+            C272,43 285,42 295,42
+            C310,41 322,41 335,41
+            C348,40 360,40 372,40
+            C384,40 396,40 408,40
+            C420,39 432,39 445,39
+            C458,38 466,38 475,39
+            C484,40 492,43 500,48
+            C508,53 514,60 520,68
+            C526,76 530,84 534,92
+            C538,100 540,108 542,114
+            C544,118 545,122 545,125
+            C549,132 554,136 560,130
+            C566,124 572,112 580,104
+            C588,96 598,88 610,80
+            C622,72 635,65 648,60
+            C661,55 674,51 688,48
+            C700,46 712,44 725,42
+            C738,40 750,39 762,38
+            C775,37 790,36 806,35
+            C820,34 836,33 852,32
+            C866,31 880,31 900,30
+            L900,170 L48,170 Z"
+            fill="url(#areaGrad)"/>
+
+          <!-- Main line path (same points, no close) -->
+          <path d="
+            M48,65
+            C65,62 80,60 95,58
+            C110,56 125,54 140,52
+            C155,50 165,49 180,48
+            C195,47 210,46 225,45
+            C238,44 250,43 260,43
+            C272,43 285,42 295,42
+            C310,41 322,41 335,41
+            C348,40 360,40 372,40
+            C384,40 396,40 408,40
+            C420,39 432,39 445,39
+            C458,38 466,38 475,39
+            C484,40 492,43 500,48
+            C508,53 514,60 520,68
+            C526,76 530,84 534,92
+            C538,100 540,108 542,114
+            C544,118 545,122 545,125
+            C549,132 554,136 560,130
+            C566,124 572,112 580,104
+            C588,96 598,88 610,80
+            C622,72 635,65 648,60
+            C661,55 674,51 688,48
+            C700,46 712,44 725,42
+            C738,40 750,39 762,38
+            C775,37 790,36 806,35
+            C820,34 836,33 852,32
+            C866,31 880,31 900,30"
+            stroke="url(#lineGrad)"
+            stroke-width="1.8"
+            fill="none"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            filter="url(#glow)"
+            style="filter: drop-shadow(0 0 3px rgba(45,126,248,.6))"/>
+
+          <!-- Regression marker (dip at x≈542, y=114 → score ~37) -->
+          <!-- Amber vertical rule -->
+          <line x1="542" y1="20" x2="542" y2="170" stroke="rgba(201,138,43,.25)" stroke-width="1" stroke-dasharray="3,3"/>
+          <!-- Marker dot -->
+          <circle cx="542" cy="114" r="4.5" fill="rgba(201,138,43,.15)" stroke="#C98A2B" stroke-width="1.5"/>
+          <circle cx="542" cy="114" r="2"   fill="#C98A2B"/>
+          <!-- Annotation tag -->
+          <rect x="550" y="102" width="88" height="22" rx="4" fill="#0D1117" stroke="rgba(201,138,43,.35)" stroke-width="1"/>
+          <text x="557" y="112" font-family="JetBrains Mono,monospace" font-size="9" fill="#C98A2B" font-weight="500">⚠ regression</text>
+          <text x="557" y="121" font-family="JetBrains Mono,monospace" font-size="8.5" fill="#8A93A6">wrong-number</text>
+
+          <!-- Recovery highlight (from x=560 onward) -->
+          <path d="M560,130 C566,124 572,112 580,104 C588,96 598,88 610,80 C622,72 635,65 648,60 C661,55 674,51 688,48 C700,46 712,44 725,42 C738,40 750,39 762,38 C775,37 790,36 806,35 C820,34 836,33 852,32 C866,31 880,31 900,30 L900,170 L560,170 Z"
+            fill="url(#recoverGrad)"/>
+
+          <!-- Recovery dot at end (current) -->
+          <circle cx="900" cy="30" r="5" fill="rgba(70,224,255,.2)" stroke="#46E0FF" stroke-width="1.5"/>
+          <circle cx="900" cy="30" r="2.5" fill="#46E0FF" style="filter: drop-shadow(0 0 4px rgba(70,224,255,.8))"/>
+
+          <!-- "87%" annotation -->
+          <rect x="862" y="14" width="34" height="16" rx="4" fill="rgba(70,224,255,.12)" stroke="rgba(70,224,255,.25)" stroke-width="1"/>
+          <text x="879" y="25" font-family="JetBrains Mono,monospace" font-size="9.5" fill="#46E0FF" text-anchor="middle" font-weight="600">87%</text>
+        </svg>
+      </div>
+    </div>
+
+    <!-- ── RECENT RUNS TABLE ── -->
+    <div class="table-card">
+      <div class="table-header-row">
+        <div>
+          <div class="table-title">Recent runs</div>
+          <div class="table-meta">Fault injection test results · sorted by recency</div>
+        </div>
+        <div class="view-all-link">
+          View all runs
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+            <path d="M4.5 2.5L8 6L4.5 9.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+      </div>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Agent</th>
+            <th>Fault injected</th>
+            <th>Assertions</th>
+            <th>Verdict</th>
+            <th>Duration</th>
+            <th>When</th>
+          </tr>
+        </thead>
+        <tbody>
+
+          <!-- Row 1: FAIL — the open regression -->
+          <tr>
+            <td>
+              <div class="agent-cell">
+                <div class="agent-icon amber">S</div>
+                <div>
+                  <div class="agent-name">support-agent</div>
+                  <div class="agent-desc run-id">#run-0e3a · acme/support</div>
+                </div>
+              </div>
+            </td>
+            <td><span class="fault-tag">wrong-number</span></td>
+            <td><span style="font-family:var(--font-mono); font-size:12px; color:var(--muted);">8 / 14</span></td>
+            <td><span class="verdict-pill fail">Fail</span></td>
+            <td><span style="font-family:var(--font-mono); font-size:11.5px; color:var(--muted);">1.2s</span></td>
+            <td class="when-cell">2m ago</td>
+          </tr>
+
+          <!-- Row 2: PASS -->
+          <tr>
+            <td>
+              <div class="agent-cell">
+                <div class="agent-icon blue">R</div>
+                <div>
+                  <div class="agent-name">refund-bot</div>
+                  <div class="agent-desc run-id">#run-7c18 · acme/finance</div>
+                </div>
+              </div>
+            </td>
+            <td><span class="fault-tag">timeout</span></td>
+            <td><span style="font-family:var(--font-mono); font-size:12px; color:var(--muted);">12 / 12</span></td>
+            <td><span class="verdict-pill pass">Pass</span></td>
+            <td><span style="font-family:var(--font-mono); font-size:11.5px; color:var(--muted);">0.8s</span></td>
+            <td class="when-cell">1h ago</td>
+          </tr>
+
+          <!-- Row 3: PASS -->
+          <tr>
+            <td>
+              <div class="agent-cell">
+                <div class="agent-icon cyan">T</div>
+                <div>
+                  <div class="agent-name">triage-agent</div>
+                  <div class="agent-desc run-id">#run-2b91 · acme/support</div>
+                </div>
+              </div>
+            </td>
+            <td><span class="fault-tag">hallucinated-tool</span></td>
+            <td><span style="font-family:var(--font-mono); font-size:12px; color:var(--muted);">9 / 9</span></td>
+            <td><span class="verdict-pill pass">Pass</span></td>
+            <td><span style="font-family:var(--font-mono); font-size:11.5px; color:var(--muted);">2.1s</span></td>
+            <td class="when-cell">3h ago</td>
+          </tr>
+
+          <!-- Row 4: CRASH -->
+          <tr>
+            <td>
+              <div class="agent-cell">
+                <div class="agent-icon indigo">E</div>
+                <div>
+                  <div class="agent-name">escalation-agent</div>
+                  <div class="agent-desc run-id">#run-5f44 · acme/ops</div>
+                </div>
+              </div>
+            </td>
+            <td><span class="fault-tag">empty-context</span></td>
+            <td><span style="font-family:var(--font-mono); font-size:12px; color:var(--muted);">0 / 6</span></td>
+            <td><span class="verdict-pill crash">Crash</span></td>
+            <td><span style="font-family:var(--font-mono); font-size:11.5px; color:var(--muted);">0.1s</span></td>
+            <td class="when-cell">5h ago</td>
+          </tr>
+
+          <!-- Row 5: PASS -->
+          <tr>
+            <td>
+              <div class="agent-cell">
+                <div class="agent-icon blue">R</div>
+                <div>
+                  <div class="agent-name">refund-bot</div>
+                  <div class="agent-desc run-id">#run-9d02 · acme/finance</div>
+                </div>
+              </div>
+            </td>
+            <td><span class="fault-tag">rate-limit</span></td>
+            <td><span style="font-family:var(--font-mono); font-size:12px; color:var(--muted);">11 / 11</span></td>
+            <td><span class="verdict-pill pass">Pass</span></td>
+            <td><span style="font-family:var(--font-mono); font-size:11.5px; color:var(--muted);">1.9s</span></td>
+            <td class="when-cell">8h ago</td>
+          </tr>
+
+        </tbody>
+      </table>
+    </div>
+
+  </main><!-- /main -->
+</div><!-- /app -->
+</body>
+</html>

@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 28'%3E%3Cpath d='M3 10H17' stroke='%232563EB' stroke-width='3.4' fill='none' stroke-linecap='round'/%3E%3Cpath d='M17 10L23 18' stroke='%232563EB' stroke-width='3.4' fill='none' stroke-linecap='round'/%3E%3C/svg%3E">
+<title>Getting started — faultline</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="app.css">
+</head>
+<body data-page="getting-started">
+<div class="app"><div id="shell"></div><main class="main" id="view"></main></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="/supabase-config.js"></script>
+<script src="/app/app.js"></script>
+<script>
+function gsStep(n, title, desc, codeHtml){
+  return '<div class="gs-step"><div class="gs-num">'+n+'</div><div class="gs-body">'+
+    '<div class="gs-title">'+fl.esc(title)+'</div>'+
+    '<div class="gs-desc">'+desc+'</div>'+
+    (codeHtml
+      ? '<div class="code" data-c="'+fl.esc(codeHtml.replace(/<[^>]+>/g,''))+'">'+
+          '<button class="copy-btn" onclick="fl.copy(this.parentElement.dataset.c,this)">Copy</button>'+
+          codeHtml+'</div>'
+      : '')+
+  '</div></div>';
+}
+
+function gsGhYaml(){
+  return 'name: faultline\n'+
+    'on: [push, pull_request]\n'+
+    'jobs:\n'+
+    '  resilience:\n'+
+    '    runs-on: ubuntu-latest\n'+
+    '    steps:\n'+
+    '      - uses: actions/checkout@v4\n'+
+    '      - uses: actions/setup-python@v5\n'+
+    '        with: { python-version: "3.12" }\n'+
+    '      - run: pip install faultline\n'+
+    '      - run: faultline run faultline_suite.py --push\n'+
+    '        env:\n'+
+    '          FAULTLINE_TOKEN: ${{ secrets.FAULTLINE_TOKEN }}';
+}
+
+fl.ready(async function(ctx){
+  var view=document.getElementById('view');
+  var pid=fl.currentProject();
+
+  // load first active token so code blocks show a real prefix
+  var tok='fl_YOUR_TOKEN';
+  try{
+    var toks=await fl.getTokens(pid);
+    var active=toks.filter(function(t){return !t.revoked_at;});
+    if(active.length) tok=(active[0].token_prefix||'fl_…')+'••••';
+  }catch(e){}
+
+  var isReal = tok.indexOf('fl_YOUR_TOKEN')<0;
+  var oneliner = 'pip install faultline && FAULTLINE_TOKEN='+tok+' faultline run faultline_suite.py --push';
+
+  var sub=fl.esc((ctx.project&&((ctx.project.org_slug?ctx.project.org_slug+' / ':'')+ctx.project.slug))||'project');
+
+  var checkCode =
+    '<span class="cmt"># faultline_suite.py</span>\n'+
+    'import faultline as fl\n\n'+
+    '<span class="cmt"># One rule your agent must never break</span>\n'+
+    'def never_oversell(run):\n'+
+    '    o = run["output"]\n'+
+    '    if o.get("ordered", 0) &gt; o.get("stock", 0):\n'+
+    '        return "ordered more than in stock"\n\n'+
+    'fl.check(agent, task,\n'+
+    '    faults=[fl.WrongNumber(targets=["inventory"])],\n'+
+    '    invariants=[never_oversell])';
+
+  var h='<div class="wrap" style="max-width:860px">';
+
+  h+='<div class="page-head"><div>'+
+    '<div class="page-title">Getting started</div>'+
+    '<div class="page-sub">'+sub+' &middot; Everything you need to catch your first silent bug</div>'+
+  '</div></div>';
+
+  // one-liner hero card
+  h+='<div class="card glow hairline" style="margin-bottom:24px">'+
+    '<div class="card-head"><div>'+
+      '<div class="card-title">The one command</div>'+
+      '<div class="card-meta">Install, run your checks, and see results here — all in one line</div>'+
+    '</div></div>'+
+    '<div class="card-pad">'+
+      '<div class="code" data-c="'+fl.esc(oneliner)+'">'+
+        '<button class="copy-btn" onclick="fl.copy(this.parentElement.dataset.c,this)">Copy</button>'+
+        fl.esc(oneliner)+
+      '</div>'+
+      (!isReal
+        ? '<div class="muted" style="font-size:12px;margin-top:10px">Replace <span class="mono">fl_YOUR_TOKEN</span> with a real token — create one in <a href="settings.html?tab=tokens" style="color:var(--accent)">Settings → Tokens</a> (takes 10 seconds).</div>'
+        : '')+
+    '</div>'+
+  '</div>';
+
+  // four-step guide
+  h+='<div class="card glow hairline">'+
+    '<div class="card-head"><div>'+
+      '<div class="card-title">How it works — four steps</div>'+
+      '<div class="card-meta">Most teams go from zero to catching a real bug in under ten minutes</div>'+
+    '</div></div>'+
+    '<div class="gs-steps">'+
+      gsStep('1', 'Install faultline',
+        'Run this in your terminal.',
+        fl.esc('pip install faultline'))+
+      gsStep('2', 'Write a check — one rule your agent must never break',
+        'A check is just a rule: you describe what correct looks like. faultline deliberately corrupts tool responses around your agent and watches for silent-wrong answers. No LLM judge — deterministic detection.',
+        checkCode)+
+      gsStep('3', 'Run it with your token and push results here',
+        'Get a token from <a href="settings.html?tab=tokens" style="color:var(--accent)">Settings → Tokens</a>, then run the one command. Results land on Overview instantly.',
+        fl.esc(oneliner))+
+      gsStep('4', 'Watch your resilience score on Overview',
+        'Every run updates your score. Any silent failure — your agent returning a wrong answer without raising an error — surfaces immediately as a regression in the Regressions tab.',
+        '')+
+    '</div>'+
+  '</div>';
+
+  // CI card
+  h+='<div class="card glow hairline" style="margin-top:16px">'+
+    '<div class="card-head"><div>'+
+      '<div class="card-title">Set up CI (GitHub Actions)</div>'+
+      '<div class="card-meta">Add this file so every push to your repo reports here automatically</div>'+
+    '</div>'+
+    '<span class="fault-tag" style="flex-shrink:0">recommended</span></div>'+
+    '<div class="card-pad">'+
+      '<div class="code" data-c="'+fl.esc(gsGhYaml())+'">'+
+        '<button class="copy-btn" onclick="fl.copy(this.parentElement.dataset.c,this)">Copy</button>'+
+        fl.esc(gsGhYaml())+
+      '</div>'+
+      '<p class="muted" style="font-size:12.5px;margin-top:10px">'+
+        'Save as <span class="mono">.github/workflows/faultline.yml</span>. '+
+        'Add <span class="mono">FAULTLINE_TOKEN</span> under your repo &rarr; Settings &rarr; Secrets and variables &rarr; Actions.'+
+      '</p>'+
+    '</div>'+
+  '</div>';
+
+  h+='<div style="margin-top:24px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">'+
+    '<a class="btn pri" href="settings.html?tab=tokens">Create a token &rarr;</a>'+
+    '<a class="btn ghost" href="overview.html">Go to Overview</a>'+
+  '</div>';
+
+  h+='</div>';
+  view.innerHTML=h;
+});
+</script>
+</body>
+</html>

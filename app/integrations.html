@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 28'%3E%3Cpath d='M3 10H17' stroke='%232563EB' stroke-width='3.4' fill='none' stroke-linecap='round'/%3E%3Cpath d='M17 10L23 18' stroke='%232563EB' stroke-width='3.4' fill='none' stroke-linecap='round'/%3E%3Cpath d='M23 18H37' stroke='%232563EB' stroke-width='3.4' fill='none' stroke-linecap='round'/%3E%3C/svg%3E">
+<title>Integrations — faultline</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="app.css">
+</head>
+<body data-page="integrations">
+<div class="app"><div id="shell"></div><main class="main" id="view"></main></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="/supabase-config.js"></script>
+<script src="/app/app.js"></script>
+<script>
+var INGEST_URL = (window.SUPABASE_URL||'') + '/rest/v1/rpc/ingest_run';
+var ANON = window.SUPABASE_ANON_KEY || '';
+var TOKEN_DISPLAY = 'flt_live_••••••••••••••••';   // replaced once a token is minted this session
+var POLL = null;
+
+fl.ready(async function(ctx){
+  var view = document.getElementById('view'), pid = fl.currentProject();
+  var toks = [];
+  try{ toks = await fl.getTokens(pid); }catch(e){ toks = []; }
+  var active = toks.filter(function(t){return !t.revoked_at;});
+  view.innerHTML = render(ctx, active);
+  startListening(pid);
+});
+
+function ghYaml(){
+  return 'name: faultline\n'+
+    'on: [push, pull_request]\n'+
+    'jobs:\n'+
+    '  resilience:\n'+
+    '    runs-on: ubuntu-latest\n'+
+    '    steps:\n'+
+    '      - uses: actions/checkout@v4\n'+
+    '      - uses: actions/setup-python@v5\n'+
+    '        with: { python-version: "3.12" }\n'+
+    '      - run: pip install faultline\n'+
+    '      - run: faultline run faultline_suite.py --push\n'+
+    '        env:\n'+
+    '          FAULTLINE_URL: ' + INGEST_URL + '\n'+
+    '          FAULTLINE_KEY: ${{ secrets.FAULTLINE_KEY }}\n'+
+    '          FAULTLINE_TOKEN: ${{ secrets.FAULTLINE_TOKEN }}';
+}
+function cliCmds(){
+  return 'pip install faultline\n\n'+
+    'export FAULTLINE_URL="'+INGEST_URL+'"\n'+
+    'export FAULTLINE_KEY="'+ANON+'"   # public anon key (safe)\n'+
+    'export FAULTLINE_TOKEN="'+TOKEN_DISPLAY+'"   # secret — your project token\n\n'+
+    'faultline run faultline_suite.py --push';
+}
+
+function render(ctx, toks){
+  var h = '<div class="wrap">';
+  h += '<div class="page-head"><div><div class="page-title">Integrations</div>'+
+       '<div class="page-sub">Wire faultline into your CI so every push reports here automatically.</div></div></div>';
+
+  // 1 · GitHub Action
+  h += '<div class="card glow hairline"><div class="card-head"><div><div class="card-title">GitHub Action</div>'+
+       '<div class="card-meta">Drop this in <span class="mono">.github/workflows/faultline.yml</span> — runs your suite on every push &amp; PR.</div></div>'+
+       '<span class="fault-tag">recommended</span></div><div class="card-pad">'+
+       codeBlock(ghYaml())+
+       '<p class="muted" style="font-size:12.5px;margin-top:10px">Add <span class="mono">FAULTLINE_KEY</span> and <span class="mono">FAULTLINE_TOKEN</span> under your repo → Settings → Secrets and variables → Actions.</p>'+
+       '</div></div>';
+
+  // 2 · Project token
+  h += '<div class="card glow hairline" style="margin-top:16px"><div class="card-head"><div><div class="card-title">Project token</div>'+
+       '<div class="card-meta">Authenticates CI pushes to this project · '+toks.length+' active</div></div>'+
+       '<button class="btn pri sm" onclick="mint()">Create token</button></div><div class="card-pad">';
+  if(!toks.length){
+    h += '<p class="muted">No active token yet. Create one, then add it as the <span class="mono">FAULTLINE_TOKEN</span> secret.</p>';
+  } else {
+    h += '<div class="row" style="flex-wrap:wrap;gap:8px">'+toks.map(function(t){
+      return '<span class="fault-tag">'+fl.esc(t.token_prefix||'flt_live_…')+'… · '+fl.esc(t.name||'token')+'</span>';
+    }).join('')+'</div><p class="muted" style="font-size:12.5px;margin-top:10px">Full token values are shown only once at creation. Manage/revoke in <a href="settings.html?tab=tokens" style="color:var(--accent)">Settings → Tokens</a>.</p>';
+  }
+  h += '</div></div>';
+
+  // 3 · CLI / local
+  h += '<div class="card glow hairline" style="margin-top:16px"><div class="card-head"><div><div class="card-title">Run locally</div>'+
+       '<div class="card-meta">Push a run from your machine to see results here</div></div></div><div class="card-pad">'+
+       codeBlock(cliCmds(),'cliBlock')+'</div></div>';
+
+  // 4 · listener
+  h += '<div class="card hairline" style="margin-top:16px"><div class="card-pad">'+
+       '<div class="listen" id="ciListen"><span class="status-dot"></span> Listening for your first run…</div>'+
+       '<div id="ciSuccess" class="hide" style="margin-top:14px"><div class="spread">'+
+         '<div><div class="card-title">✓ A run just landed</div><div class="card-meta">Your CI → faultline pipe works.</div></div>'+
+         '<a class="btn pri" href="overview.html">Open dashboard →</a></div></div>'+
+       '</div></div>';
+
+  // 5 · GitHub connect (honest)
+  h += '<div class="card hairline" style="margin-top:16px"><div class="card-head"><div><div class="card-title">Connect GitHub</div>'+
+       '<div class="card-meta">Richer PR/commit links + one-click secret setup</div></div><span class="fault-tag">coming soon</span></div>'+
+       '<div class="card-pad"><button class="btn sec" onclick="fl.toast(\'GitHub app connect is coming soon — use the Action above for now\',\'warn\')">Connect GitHub</button></div></div>';
+
+  h += '</div>';
+  return h;
+}
+
+function codeBlock(text, id){
+  return '<div class="code"'+(id?(' id="'+id+'"'):'')+' data-c="'+fl.esc(text)+'">'+
+    '<button class="copy-btn" onclick="fl.copy(this.parentElement.dataset.c,this)">Copy</button>'+fl.esc(text)+'</div>';
+}
+
+function askTokenName(onName){
+  var ov=document.createElement('div'); ov.className='ov show';
+  ov.innerHTML='<div class="modal" style="position:relative;max-width:440px">'+
+    '<button class="x" onclick="this.closest(\'.ov\').remove()">&times;</button><h3>Name your token</h3>'+
+    '<p class="muted" style="margin-bottom:14px">A label so you can recognise it later — e.g. "GitHub Actions" or "local dev".</p>'+
+    '<input id="tokNameInput" maxlength="40" placeholder="CI token" value="CI token" autocomplete="off" spellcheck="false" '+
+      'style="width:100%;background:rgba(255,255,255,.04);border:1px solid var(--border2);border-radius:9px;padding:11px 13px;color:var(--text);font-family:inherit;font-size:14px;outline:none">'+
+    '<div class="row" style="margin-top:16px;justify-content:flex-end;gap:10px">'+
+      '<button class="btn sec" onclick="this.closest(\'.ov\').remove()">Cancel</button>'+
+      '<button class="btn pri" id="tokNameGo">Create token</button></div></div>';
+  ov.addEventListener('click',function(e){ if(e.target===ov) ov.remove(); });
+  document.body.appendChild(ov);
+  var inp=ov.querySelector('#tokNameInput'); setTimeout(function(){inp.focus();inp.select();},30);
+  function go(){ var name=(inp.value||'').trim()||'CI token'; ov.remove(); onName(name); }
+  ov.querySelector('#tokNameGo').addEventListener('click',go);
+  inp.addEventListener('keydown',function(e){ if(e.key==='Enter'){e.preventDefault();go();} });
+}
+function mint(){
+  var pid = fl.currentProject();
+  askTokenName(async function(name){
+  var full;
+  try{ full = await fl.mintToken(pid, name); }catch(e){ fl.toast((e&&e.message)||'Could not create token','warn'); return; }
+  if(!full){ fl.toast('Could not create token','warn'); return; }
+  TOKEN_DISPLAY = full;
+  // refresh the CLI block with the real token
+  var cb = document.getElementById('cliBlock');
+  if(cb){ cb.dataset.c = cliCmds(); cb.innerHTML = '<button class="copy-btn" onclick="fl.copy(this.parentElement.dataset.c,this)">Copy</button>'+fl.esc(cliCmds()); }
+  // modal: show once
+  var ov = document.createElement('div'); ov.className='ov show';
+  ov.innerHTML = '<div class="modal" style="position:relative;max-width:560px">'+
+    '<button class="x" onclick="this.closest(\'.ov\').remove()">&times;</button><h3>Token created</h3>'+
+    '<p class="muted" style="margin-bottom:14px">Copy it now — it won\'t be shown again. Add it as the <b style="color:var(--text)">FAULTLINE_TOKEN</b> secret in your repo.</p>'+
+    '<div class="code" data-c="'+fl.esc(full)+'"><button class="copy-btn" onclick="fl.copy(this.parentElement.dataset.c,this)">Copy</button>'+fl.esc(full)+'</div>'+
+    '<div class="row" style="margin-top:16px;justify-content:flex-end"><button class="btn sec" onclick="this.closest(\'.ov\').remove()">Done</button></div></div>';
+  ov.addEventListener('click', function(e){ if(e.target===ov) ov.remove(); });
+  document.body.appendChild(ov);
+  });
+}
+
+function startListening(pid){
+  if(POLL) clearInterval(POLL);
+  async function check(){
+    try{
+      var r = await fl.sb.from('runs').select('id').eq('project_id',pid).limit(1);
+      if(!r.error && r.data && r.data.length){
+        clearInterval(POLL); POLL=null;
+        var l=document.getElementById('ciListen'), s=document.getElementById('ciSuccess');
+        if(l) l.classList.add('hide'); if(s) s.classList.remove('hide');
+      }
+    }catch(e){}
+  }
+  POLL = setInterval(check, 4000); check();
+}
+</script>
+</body>
+</html>

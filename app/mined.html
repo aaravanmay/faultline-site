@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 28'%3E%3Cpath d='M3 10H17' stroke='%232563EB' stroke-width='3.4' fill='none' stroke-linecap='round'/%3E%3Cpath d='M17 10L23 18' stroke='%232563EB' stroke-width='3.4' fill='none' stroke-linecap='round'/%3E%3Cpath d='M23 18H37' stroke='%232563EB' stroke-width='3.4' fill='none' stroke-linecap='round'/%3E%3C/svg%3E">
+<title>Mined Rules — faultline</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="app.css">
+<style>
+.rule-row{display:flex;align-items:flex-start;gap:16px;padding:16px 20px}
+.rule-row+.rule-row{border-top:1px solid var(--border)}
+.rule-ic{width:32px;height:32px;border-radius:7px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:13px}
+.rule-body{flex:1;min-width:0}
+.rule-name{font-family:var(--mono);font-size:13px;font-weight:600;color:var(--text);margin-bottom:3px}
+.rule-desc{font-size:12.5px;color:var(--muted);line-height:1.5}
+.rule-meta{display:flex;align-items:center;gap:10px;margin-top:6px;font-size:11.5px;color:var(--faint);font-family:var(--mono)}
+.rule-meta .dot{width:3px;height:3px;border-radius:50%;background:var(--faint)}
+.rule-status{flex-shrink:0;text-align:right;min-width:120px}
+.status-enforced{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;letter-spacing:.03em;text-transform:uppercase;padding:3px 9px;border-radius:20px;background:rgba(167,139,250,.12);color:#A78BFA;border:1px solid rgba(167,139,250,.22)}
+.status-enforced::before{content:"";width:5px;height:5px;border-radius:50%;background:currentColor;flex-shrink:0}
+.status-watching{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;letter-spacing:.03em;text-transform:uppercase;padding:3px 9px;border-radius:20px;background:rgba(130,138,154,.1);color:var(--muted);border:1px dashed rgba(130,138,154,.4)}
+.status-watching::before{content:"";width:5px;height:5px;border-radius:50%;background:currentColor;flex-shrink:0}
+.violation-row{padding:10px 18px;background:rgba(245,158,11,.04);border-left:2px solid rgba(245,158,11,.4)}
+.violation-row+.violation-row{border-top:1px solid rgba(255,255,255,.03)}
+</style>
+</head>
+<body data-page="mined">
+<div class="app"><div id="shell"></div><main class="main" id="view"></main></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="/supabase-config.js"></script>
+<script src="/app/app.js"></script>
+<script>
+// Real mined rule from faultline + plausible adjacent ones
+var MINED_RULES = [
+  {
+    id: 'm1',
+    name: 'validate_address_before_ship',
+    agent: 'shipping-agent',
+    color: 'blue',
+    observed: 'validate_address is always called before ship_package in 47 of 47 good runs',
+    enforced: true,
+    learned_from: 47,
+    violations: [
+      { run: 'run-2024-06-05-3a7f', detail: 'ship_package called directly — validate_address was skipped', when: new Date(Date.now()-8*3600000).toISOString() }
+    ],
+    last_violation: new Date(Date.now()-8*3600000).toISOString()
+  },
+  {
+    id: 'm2',
+    name: 'confirm_before_irreversible_action',
+    agent: 'order-agent',
+    color: 'indigo',
+    observed: 'confirm_order is always preceded by get_inventory_check in 38 of 38 good runs',
+    enforced: true,
+    learned_from: 38,
+    violations: [],
+    last_violation: null
+  },
+  {
+    id: 'm3',
+    name: 'no_tool_result_used_without_null_check',
+    agent: 'refund-agent',
+    color: 'cyan',
+    observed: 'every tool result is null-checked before its value is passed downstream in 29 of 31 good runs (2 exceptions under investigation)',
+    enforced: false,
+    learned_from: 31,
+    violations: [],
+    last_violation: null
+  },
+  {
+    id: 'm4',
+    name: 'escalate_on_policy_ambiguity',
+    agent: 'support-agent',
+    color: 'amber',
+    observed: 'agent calls escalate_to_human when confidence < 0.6 in 22 of 22 good runs',
+    enforced: true,
+    learned_from: 22,
+    violations: [],
+    last_violation: null
+  }
+];
+
+fl.ready(async function(ctx){
+  var view=document.getElementById('view');
+  view.innerHTML='<div class="wrap">'+
+    '<div class="skel" style="height:64px"></div>'+
+    '<div class="skel" style="height:50px;margin-top:12px"></div>'+
+    '<div class="skel" style="height:260px;margin-top:12px"></div>'+
+    '<div class="skel" style="height:180px;margin-top:12px"></div>'+
+    '</div>';
+  setTimeout(function(){ view.innerHTML=render(ctx); }, 150);
+});
+
+function render(ctx){
+  var sub=fl.esc((ctx.project&&((ctx.project.org_slug?ctx.project.org_slug+' / ':'')+ctx.project.slug))||'project');
+  var enforced=MINED_RULES.filter(function(r){return r.enforced;}).length;
+  var withViolations=MINED_RULES.filter(function(r){return r.violations&&r.violations.length;}).length;
+
+  var h='<div class="wrap">';
+  h+='<div class="page-head"><div>'+
+     '<div class="page-title">Mined Rules</div>'+
+     '<div class="page-sub">'+sub+' · '+
+     enforced+' enforced · '+(withViolations?('<span style="color:var(--silent)">'+withViolations+' with violations</span>'):'no violations')+'</div>'+
+     '</div></div>';
+
+  // rules
+  h+='<div class="card glow hairline"><div class="card-head"><div>'+
+     '<div class="card-title">Mined invariants</div>'+
+     '<div class="card-meta">Patterns extracted from good runs · enforced as deterministic rules</div></div>'+
+     '</div>';
+
+  MINED_RULES.forEach(function(r){
+    h+=ruleRow(r);
+    if(r.violations && r.violations.length){
+      r.violations.forEach(function(v){
+        h+='<div class="violation-row">'+
+           '<div style="display:flex;align-items:center;gap:8px">'+
+             '<svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M6.5 2.5v4M6.5 8.5v.5" stroke="#F59E0B" stroke-width="1.4" stroke-linecap="round"/><path d="M1 11L6.5 1l5.5 10H1Z" stroke="#F59E0B" stroke-width="1.1" stroke-linejoin="round"/></svg>'+
+             '<span style="font-size:12px;color:var(--silent)">Violation detected</span>'+
+             '<span class="fault-tag" style="font-family:var(--mono);font-size:10px">'+fl.esc(v.run)+'</span>'+
+             '<span style="font-size:11.5px;color:var(--faint);font-family:var(--mono);margin-left:auto">'+fl.rel(v.when)+'</span>'+
+           '</div>'+
+           '<div style="font-size:12px;color:var(--muted);margin-top:4px;padding-left:21px">'+fl.esc(v.detail)+'</div>'+
+        '</div>';
+      });
+    }
+  });
+
+  h+='</div>';
+
+  h+='</div>';
+  return h;
+}
+
+function ruleRow(r){
+  var status=r.enforced
+    ?'<span class="status-enforced">Enforced</span>'
+    :'<span class="status-watching">Watching</span>';
+  var hasViolation=r.violations&&r.violations.length>0;
+  return '<div class="rule-row">'+
+    '<div class="rule-ic agent-ic '+r.color+'">'+fl.esc(r.agent[0].toUpperCase())+'</div>'+
+    '<div class="rule-body">'+
+      '<div class="rule-name">'+fl.esc(r.name)+'</div>'+
+      '<div class="rule-desc">'+fl.esc(r.observed)+'</div>'+
+      '<div class="rule-meta">'+
+        '<span>'+r.agent+'</span>'+
+        '<span class="dot"></span>'+
+        '<span>learned from '+r.learned_from+' runs</span>'+
+        (hasViolation?('<span class="dot"></span><span style="color:var(--silent)">'+r.violations.length+' violation'+(r.violations.length===1?'':'s')+'</span>'):'<span class="dot"></span><span style="color:#34D399">no violations</span>')+
+      '</div>'+
+    '</div>'+
+    '<div class="rule-status">'+status+'</div>'+
+  '</div>';
+}
+
+</script>
+</body>
+</html>

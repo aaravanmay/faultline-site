@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Get started — faultline</title>
+<meta name="description" content="Set up faultline and catch your first silent agent failure.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 28'%3E%3Cpath d='M3 10H17' stroke='%232563EB' stroke-width='3.4' fill='none' stroke-linecap='round'/%3E%3Cpath d='M17 10L23 18' stroke='%232563EB' stroke-width='3.4' fill='none' stroke-linecap='round'/%3E%3Cpath d='M23 18H37' stroke='%232563EB' stroke-width='3.4' fill='none' stroke-linecap='round'/%3E%3C/svg%3E">
+<!-- light marketing-site fonts -->
+<link href="https://api.fontshare.com/v2/css?f[]=general-sans@400,500,600,700&f[]=clash-display@600,700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  /* ── light design tokens, lifted from the marketing site (index.html) ── */
+  :root{
+    --bg:#F4F2EF; --surface:#FFFFFF; --ink:#0B0D14; --ink2:#3C4250; --muted:#6B7280;
+    --line:#ECE9E4; --line2:#E2DED7;
+    --blue:#2563EB; --blue-ink:#1B43B4; --blue-tint:#EFF4FF; --blue-line:#D6E2FF; --blue-soft:#F4F8FF;
+    --silent:#E0830C; --crash:#DC2B2B; --ok:#1a9d5a;
+    --sh-sm:0 1px 2px rgba(13,18,40,.06); --sh:0 14px 44px rgba(13,18,45,.10),0 2px 8px rgba(120,90,60,.05);
+    --sh-lg:0 44px 96px rgba(13,20,55,.16),0 4px 14px rgba(120,90,60,.06);
+    --sans:"General Sans",system-ui,sans-serif; --display:"Clash Display","General Sans",sans-serif; --mono:"JetBrains Mono",monospace;
+    --ease:cubic-bezier(.16,1,.3,1);
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:17px;line-height:1.6;-webkit-font-smoothing:antialiased;min-height:100vh}
+  a{color:inherit;text-decoration:none}
+  ::selection{background:#cfe0ff}
+  .eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--blue);font-weight:500}
+
+  /* lit atmosphere + film grain (same as marketing) */
+  .atmos{position:fixed;inset:0;z-index:-3;pointer-events:none;
+    background:
+      radial-gradient(58% 50% at 16% 8%, #DCE3F6 0%, transparent 60%),
+      radial-gradient(54% 48% at 86% 16%, #F7E2D0 0%, transparent 58%),
+      radial-gradient(52% 46% at 60% 96%, #E7E0F3 0%, transparent 60%),
+      radial-gradient(80% 70% at 50% 44%, #FBF9F6 0%, transparent 82%);
+    filter:saturate(1.04)}
+  .grain{position:fixed;inset:0;z-index:60;pointer-events:none;opacity:.05;mix-blend-mode:overlay;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");background-size:180px}
+
+  /* ── top bar ── */
+  .top{position:sticky;top:0;z-index:50;backdrop-filter:blur(14px);background:rgba(244,242,239,.72);border-bottom:1px solid var(--line)}
+  .top .bar{max-width:1120px;margin:0 auto;padding:15px clamp(20px,5vw,40px);display:flex;align-items:center;justify-content:space-between}
+  .brand{display:flex;align-items:center;gap:10px;font-weight:600;font-size:19px;letter-spacing:-.02em}
+  .brand svg{display:block}
+  .skiplink{font-family:var(--mono);font-size:12.5px;letter-spacing:.04em;color:var(--muted);display:inline-flex;align-items:center;gap:6px;padding:8px 12px;border-radius:9px;transition:color .2s,background .2s}
+  .skiplink:hover{color:var(--ink2);background:rgba(255,255,255,.6)}
+
+  /* ── buttons (marketing .btn) ── */
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;font-family:var(--sans);font-weight:500;font-size:15px;border-radius:10px;padding:11px 18px;border:0;cursor:pointer;transition:transform .25s var(--ease),box-shadow .25s var(--ease),background .2s,border-color .2s}
+  .btn.pri{background:var(--blue);color:#fff;box-shadow:0 1px 2px rgba(37,99,235,.4),0 8px 24px rgba(37,99,235,.22)}
+  .btn.pri:hover{background:var(--blue-ink);box-shadow:0 10px 30px rgba(37,99,235,.34)}
+  .btn.pri:disabled{opacity:.55;cursor:not-allowed;box-shadow:0 1px 2px rgba(37,99,235,.3)}
+  .btn.pri:disabled:hover{background:var(--blue);box-shadow:0 1px 2px rgba(37,99,235,.3)}
+  .btn.sec{background:var(--surface);color:var(--ink);border:1px solid var(--line2);box-shadow:var(--sh-sm)}
+  .btn.sec:hover{border-color:#cdd2dc}
+  .btn .sp{width:14px;height:14px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;display:none}
+  .btn.loading .sp{display:inline-block}
+  @keyframes spin{to{transform:rotate(360deg)}}
+
+  /* ── page shell ── */
+  .page{max-width:720px;margin:0 auto;padding:clamp(40px,7vw,84px) clamp(20px,5vw,40px) 100px}
+  .head{text-align:center;margin-bottom:clamp(34px,5vw,52px)}
+  .head .eyebrow{display:inline-flex;align-items:center;gap:9px;padding:6px 14px;border:1px solid var(--blue-line);background:rgba(255,255,255,.62);backdrop-filter:blur(10px);border-radius:999px;margin-bottom:20px}
+  .head .eyebrow .pdot{width:6px;height:6px;border-radius:50%;background:var(--blue);box-shadow:0 0 0 3px rgba(37,99,235,.15)}
+  .head h1{font-family:var(--display);font-weight:600;font-size:clamp(34px,5.6vw,56px);letter-spacing:-.03em;line-height:1.02;color:var(--ink)}
+  .head .sub{color:var(--ink2);font-size:clamp(16px,1.6vw,19px);line-height:1.55;margin-top:16px;max-width:46ch;margin-left:auto;margin-right:auto}
+
+  /* ── vertical numbered stepper ── */
+  .stepper{position:relative;display:flex;flex-direction:column;gap:0}
+  .stepper::before{content:"";position:absolute;left:18px;top:18px;bottom:30px;width:2px;background:linear-gradient(var(--line2),var(--line2));z-index:0}
+  .step{position:relative;display:grid;grid-template-columns:38px 1fr;gap:20px;padding:0 0 30px}
+  .step:last-child{padding-bottom:0}
+  .step .num{position:relative;z-index:1;width:38px;height:38px;border-radius:50%;background:var(--surface);border:2px solid var(--line2);color:var(--muted);
+    font-family:var(--mono);font-size:15px;font-weight:500;display:flex;align-items:center;justify-content:center;transition:all .4s var(--ease)}
+  .step.done .num{background:var(--ok);border-color:var(--ok);color:#fff}
+  .step.active .num{border-color:var(--blue);color:var(--blue);box-shadow:0 0 0 4px rgba(37,99,235,.12)}
+  .step .num .chk{display:none}
+  .step.done .num .chk{display:block}
+  .step.done .num .n{display:none}
+  .step .body{padding-top:5px;min-width:0}
+  .step h3{font-size:20px;font-weight:600;letter-spacing:-.02em;color:var(--ink);margin-bottom:4px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .step .lede{color:var(--ink2);font-size:15.5px;line-height:1.55;margin-bottom:14px}
+  .step .badge-done{font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--ok);background:rgba(26,157,90,.1);border:1px solid rgba(26,157,90,.25);border-radius:999px;padding:3px 9px;display:none;align-items:center;gap:5px}
+  .step.done .badge-done{display:inline-flex}
+
+  /* steps 2-4 are gated until a project exists */
+  .gated{opacity:.42;filter:saturate(.4);pointer-events:none;transition:opacity .5s var(--ease),filter .5s var(--ease)}
+  .gated.unlocked{opacity:1;filter:none;pointer-events:auto}
+
+  /* step 1 form */
+  .name-row{display:flex;gap:10px;flex-wrap:wrap;align-items:stretch}
+  .name-row input{flex:1;min-width:200px;padding:12px 14px;border:1px solid var(--line2);border-radius:10px;font-family:var(--sans);font-size:15.5px;color:var(--ink);background:var(--surface);transition:border-color .2s,box-shadow .2s}
+  .name-row input:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px rgba(37,99,235,.12)}
+  .name-row input:disabled{background:#f7f6f4;color:var(--muted)}
+  .slug-hint{font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:8px}
+  .slug-hint b{color:var(--ink2);font-weight:500}
+
+  /* ── dark code block (the one dark accent on a light page) ── */
+  .code{position:relative;background:#0A0E17;border:1px solid #1b2230;border-radius:12px;padding:16px 18px;padding-right:78px;
+    font-family:var(--mono);font-size:13px;line-height:1.7;color:#cdd6e6;white-space:pre;overflow-x:auto;
+    box-shadow:0 14px 40px rgba(10,14,23,.28),inset 0 1px 0 rgba(255,255,255,.04)}
+  .code + .code{margin-top:10px}
+  .code .cmt{color:#5d6b82}
+  .code .kw{color:#7dd3fc}
+  .code .str{color:#86c79a}
+  .code .fn{color:#c4b5fd}
+  .code .dim{color:#5d6b82}
+  .code .tok{color:#f0a44a}
+  .copy-btn{position:absolute;top:10px;right:10px;font-family:var(--mono);font-size:11px;letter-spacing:.04em;color:#aeb9cc;background:#141b28;border:1px solid #283246;border-radius:7px;padding:5px 10px;cursor:pointer;transition:background .15s,color .15s,border-color .15s}
+  .copy-btn:hover{background:#1b2434;color:#e6ecf6;border-color:#39455c}
+
+  /* amber callout */
+  .callout{display:flex;gap:11px;align-items:flex-start;margin-top:12px;padding:12px 14px;border-radius:11px;
+    background:rgba(224,131,12,.07);border:1px solid rgba(224,131,12,.24);color:#8a5208;font-size:14px;line-height:1.5}
+  .callout svg{flex:none;margin-top:1px;color:var(--silent)}
+  .callout b{color:#6f4106;font-weight:600}
+  .note{font-size:13.5px;color:var(--muted);margin-top:10px;line-height:1.5}
+  .note code{font-family:var(--mono);font-size:12.5px;background:rgba(11,13,20,.05);padding:1px 5px;border-radius:5px;color:var(--ink2)}
+
+  /* ── listening strip ── */
+  .listen{margin-top:26px;background:var(--surface);border:1px solid var(--line2);border-radius:14px;box-shadow:var(--sh-sm);
+    padding:18px 20px;display:flex;align-items:center;gap:14px;transition:opacity .4s var(--ease)}
+  .listen.gated{opacity:.42;filter:saturate(.4)}
+  .listen.gated.unlocked{opacity:1;filter:none}
+  .listen .dot{position:relative;width:11px;height:11px;flex:none}
+  .listen .dot::before,.listen .dot::after{content:"";position:absolute;inset:0;border-radius:50%;background:var(--blue)}
+  .listen .dot::after{animation:pulse 1.8s var(--ease) infinite}
+  @keyframes pulse{0%{transform:scale(1);opacity:.7}70%{transform:scale(3.2);opacity:0}100%{opacity:0}}
+  .listen .txt{font-size:15px;color:var(--ink2)}
+  .listen .txt b{color:var(--ink);font-weight:600}
+  .listen .sub2{font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:2px}
+
+  /* success card (replaces the listen strip once a run lands) */
+  .success{margin-top:26px;background:linear-gradient(180deg,var(--blue-soft),var(--surface));border:1px solid var(--blue-line);border-radius:16px;
+    box-shadow:0 20px 50px rgba(37,99,235,.14);padding:26px 24px;display:none;animation:rise .5s var(--ease)}
+  .success.show{display:block}
+  @keyframes rise{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+  .success .ic{width:46px;height:46px;border-radius:12px;background:var(--ok);color:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 22px rgba(26,157,90,.32);margin-bottom:14px}
+  .success h3{font-family:var(--display);font-size:24px;font-weight:600;letter-spacing:-.02em;margin-bottom:6px}
+  .success p{color:var(--ink2);font-size:15.5px;line-height:1.55;margin-bottom:18px;max-width:44ch}
+
+  /* demo / divider */
+  .alt{margin-top:34px;text-align:center}
+  .alt .or{display:flex;align-items:center;gap:14px;color:var(--muted);font-family:var(--mono);font-size:11.5px;letter-spacing:.1em;text-transform:uppercase;margin-bottom:18px}
+  .alt .or::before,.alt .or::after{content:"";flex:1;height:1px;background:var(--line2)}
+  .alt .demo-note{font-size:13.5px;color:var(--muted);margin-top:12px}
+
+  @media(max-width:560px){
+    .step{grid-template-columns:32px 1fr;gap:14px}
+    .step .num{width:32px;height:32px;font-size:13px}
+    .stepper::before{left:15px}
+    .code{font-size:12px;padding-right:70px}
+  }
+</style>
+</head>
+<body data-page="onboarding">
+  <div class="atmos" aria-hidden="true"></div>
+  <div class="grain" aria-hidden="true"></div>
+
+  <header class="top"><div class="bar">
+    <a class="brand" href="/index.html">
+      <svg width="27" height="19" viewBox="0 0 40 28" fill="none"><path d="M3 10H17" stroke="#0B0D14" stroke-width="3.2" stroke-linecap="round"/><path d="M17 10L23 18" stroke="#2563EB" stroke-width="3.2" stroke-linecap="round"/><path d="M23 18H37" stroke="#0B0D14" stroke-width="3.2" stroke-linecap="round"/></svg>
+      faultline
+    </a>
+    <a class="skiplink" id="skipLink" href="/app/overview.html">Skip to dashboard →</a>
+  </div></header>
+
+  <main class="page">
+    <div class="head">
+      <span class="eyebrow"><span class="pdot"></span> Get started</span>
+      <h1>Let's catch your first<br>silent failure.</h1>
+      <p class="sub">Four small steps. By the end, faultline will be breaking your agent's tools on purpose — and telling you the moment it confidently does the wrong thing.</p>
+    </div>
+
+    <div class="stepper">
+
+      <!-- STEP 1 — name your project -->
+      <section class="step active" id="step1">
+        <div class="num"><span class="n">1</span><svg class="chk" width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        <div class="body">
+          <h3>Name your project <span class="badge-done"><svg width="11" height="11" viewBox="0 0 24 24" fill="none"><path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg> Created</span></h3>
+          <p class="lede">A project groups the agents you test and holds your CI token. You can rename it later.</p>
+          <div class="name-row">
+            <input id="projName" type="text" placeholder="support-agent" autocomplete="off" spellcheck="false" maxlength="48">
+            <button class="btn pri" id="createBtn"><span class="sp"></span><span class="lbl">Create project →</span></button>
+          </div>
+          <div class="slug-hint" id="slugHint">URL slug: <b id="slugPreview">support-agent</b></div>
+        </div>
+      </section>
+
+      <!-- STEP 2 — install -->
+      <section class="step gated" id="step2">
+        <div class="num"><span class="n">2</span><svg class="chk" width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        <div class="body">
+          <h3>Install</h3>
+          <p class="lede">Add faultline to the repo your agent lives in. Pure Python, zero config.</p>
+          <div class="code" data-c="pip install faultline"><button class="copy-btn" onclick="fl.copy(this.parentElement.dataset.c,this)">Copy</button>pip install faultline</div>
+        </div>
+      </section>
+
+      <!-- STEP 3 — wrap tools + write an invariant -->
+      <section class="step gated" id="step3">
+        <div class="num"><span class="n">3</span><svg class="chk" width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        <div class="body">
+          <h3>Wrap your tools + write one invariant</h3>
+          <p class="lede">Decorate the tools your agent calls, then state the one thing that must stay true. faultline corrupts each tool in turn and watches whether your agent notices.</p>
+          <div class="code" id="snippetPy" data-c="from faultline import tool, chaos
+from faultline.faults import WrongNumber, StaleData, Timeout
+
+@tool                                  # wrap each tool your agent calls
+def lookup_order(id): ...
+
+@tool
+def issue_refund(order, amount): ...
+
+# the one thing that must stay true, on broken data or not
+def oracle(answer, ctx):
+    assert answer.refund <= ctx.order_total   # never over-refund
+
+result = chaos(agent, task='refund my last order', oracle=oracle,
+               faults=[WrongNumber('lookup_order'),
+                       StaleData('lookup_order'),
+                       Timeout('issue_refund')])
+result.report()"><button class="copy-btn" onclick="fl.copy(this.parentElement.dataset.c,this)">Copy</button><span class="kw">from</span> faultline <span class="kw">import</span> tool, chaos
+<span class="kw">from</span> faultline.faults <span class="kw">import</span> WrongNumber, StaleData, Timeout
+
+<span class="fn">@tool</span>                                  <span class="cmt"># wrap each tool your agent calls</span>
+<span class="kw">def</span> <span class="fn">lookup_order</span>(id): ...
+
+<span class="fn">@tool</span>
+<span class="kw">def</span> <span class="fn">issue_refund</span>(order, amount): ...
+
+<span class="cmt"># the one thing that must stay true, on broken data or not</span>
+<span class="kw">def</span> <span class="fn">oracle</span>(answer, ctx):
+    <span class="kw">assert</span> answer.refund <= ctx.order_total   <span class="cmt"># never over-refund</span>
+
+result = <span class="fn">chaos</span>(agent, task=<span class="str">'refund my last order'</span>, oracle=oracle,
+               faults=[<span class="fn">WrongNumber</span>(<span class="str">'lookup_order'</span>),
+                       <span class="fn">StaleData</span>(<span class="str">'lookup_order'</span>),
+                       <span class="fn">Timeout</span>(<span class="str">'issue_refund'</span>)])
+result.<span class="fn">report</span>()</div>
+          <div class="callout">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <div><b>No real side effects.</b> Action tools like <code style="font-family:var(--mono);font-size:12px">issue_refund</code> are captured during a test — faultline records what the agent <i>would</i> do, it never actually fires them.</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- STEP 4 — run -->
+      <section class="step gated" id="step4">
+        <div class="num"><span class="n">4</span><svg class="chk" width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        <div class="body">
+          <h3>Run your first check</h3>
+          <p class="lede">Run the suite and push the results up here. In CI, this is one step in your pipeline.</p>
+          <div class="code" data-c="faultline run faultline_suite.py --push"><button class="copy-btn" onclick="fl.copy(this.parentElement.dataset.c,this)">Copy</button>faultline run faultline_suite.py --push</div>
+          <div class="code" id="tokenBlock" data-c="FAULTLINE_TOKEN=…"><button class="copy-btn" onclick="fl.copy(this.parentElement.dataset.c,this)">Copy</button><span class="dim"># faultline reads this to know where to send results</span>
+<span class="kw">export</span> FAULTLINE_TOKEN=<span class="tok" id="tokenInline">flt_••••••••••••••••</span></div>
+          <p class="note">The token tells faultline which project to report to. Add it to your CI secrets — don't commit it.</p>
+        </div>
+      </section>
+
+    </div>
+
+    <!-- listening strip → swaps to success card on first run -->
+    <div class="listen gated" id="listen">
+      <span class="dot" aria-hidden="true"></span>
+      <div>
+        <div class="txt"><b>Listening for your first run…</b></div>
+        <div class="sub2">this page updates the moment results land</div>
+      </div>
+    </div>
+
+    <div class="success" id="success">
+      <div class="ic"><svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <h3>Your first run landed!</h3>
+      <p>faultline ran your suite and scored how your agent holds up when its tools lie. Let's look at what it caught.</p>
+      <a class="btn pri" href="/app/overview.html">Open dashboard →</a>
+    </div>
+
+    <!-- demo escape hatch -->
+    <div class="alt">
+      <div class="or">or</div>
+      <button class="btn sec" id="demoBtn"><span class="sp" style="border-color:rgba(11,13,20,.25);border-top-color:var(--blue)"></span><span class="lbl">Load demo data instead</span></button>
+      <div class="demo-note">Fills your dashboard with a realistic example agent so you can explore first.</div>
+    </div>
+  </main>
+
+  <!-- supabase-js CDN → config → app spine → seed → page logic -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="/supabase-config.js"></script>
+  <script src="/app/app.js"></script>
+  <script src="/app/seed.js"></script>
+  <script>
+  (async function () {
+    "use strict";
+    var sb = window.fl && window.fl.sb;
+
+    // ── gate: must be configured + signed in (do NOT use fl.ready — no project may exist) ──
+    if (!sb) { location.replace("/index.html"); return; }
+    var s = (await sb.auth.getSession()).data.session;
+    if (!s) { location.replace("/index.html#signin"); return; }
+
+    // first org for this user (created at signup); if none, send back to marketing
+    var m = await sb.from("org_members").select("org_id").limit(1);
+    if (m.error || !m.data || !m.data.length) {
+      fl.toast && fl.toast("Couldn't find your workspace — try signing in again", "warn");
+      setTimeout(function () { location.replace("/index.html#signin"); }, 1600);
+      return;
+    }
+    var orgId = m.data[0].org_id;
+
+    // ── element refs ──
+    var nameIn = document.getElementById("projName");
+    var slugPreview = document.getElementById("slugPreview");
+    var createBtn = document.getElementById("createBtn");
+    var step1 = document.getElementById("step1");
+    var gated = [document.getElementById("step2"), document.getElementById("step3"), document.getElementById("step4")];
+    var listen = document.getElementById("listen");
+    var success = document.getElementById("success");
+    var tokenInline = document.getElementById("tokenInline");
+    var tokenBlock = document.getElementById("tokenBlock");
+    var demoBtn = document.getElementById("demoBtn");
+    var skipLink = document.getElementById("skipLink");
+
+    var pollTimer = null;
+
+    // "Skip to dashboard" must guarantee a project exists, or overview bounces back here.
+    if (skipLink) skipLink.addEventListener("click", async function (e) {
+      e.preventDefault();
+      skipLink.textContent = "Opening…";
+      try {
+        var pid = fl.currentProject && fl.currentProject();
+        if (!pid) {
+          try { pid = await fl.createProject(orgId, "My agent", "my-agent"); }
+          catch (er) { /* slug may already exist from a prior attempt; overview will find it */ }
+          if (pid) { try { await fl.mintToken(pid, "CI token"); } catch (e2) {} fl.setProject(pid); }
+        }
+      } catch (e3) {}
+      location.href = "/app/overview.html";
+    });
+
+    function slugify(v) {
+      return (v || "").toLowerCase().trim()
+        .replace(/[^a-z0-9]+/g, "-")   // non-alphanumerics → dashes
+        .replace(/^-+|-+$/g, "");      // trim leading/trailing dashes
+    }
+
+    // live slug preview
+    nameIn.addEventListener("input", function () {
+      var sl = slugify(nameIn.value) || "support-agent";
+      slugPreview.textContent = sl;
+    });
+    nameIn.addEventListener("keydown", function (e) { if (e.key === "Enter") createBtn.click(); });
+    nameIn.focus();
+
+    function setBtnLoading(btn, on) {
+      btn.classList.toggle("loading", on);
+      btn.disabled = on;
+    }
+
+    // ── STEP 1 → create project, mint token, reveal 2-4, start polling ──
+    createBtn.addEventListener("click", async function () {
+      var name = nameIn.value.trim();
+      if (!name) { name = "support-agent"; nameIn.value = name; }
+      var slug = slugify(name) || "support-agent";
+
+      setBtnLoading(createBtn, true);
+      try {
+        var pid = await fl.createProject(orgId, name, slug);
+        if (!pid) throw new Error("Project creation returned nothing");
+
+        var tok = await fl.mintToken(pid, "CI token");
+        fl.setProject(pid);
+
+        // write the real token into step 4's code block (value + copy payload)
+        if (tok) {
+          tokenInline.textContent = tok;
+          tokenBlock.dataset.c =
+            "# faultline reads this to know where to send results\n" +
+            "export FAULTLINE_TOKEN=" + tok;
+        }
+
+        // mark step 1 done, lock the input
+        step1.classList.remove("active");
+        step1.classList.add("done");
+        nameIn.disabled = true;
+        createBtn.querySelector(".lbl").textContent = "Created ✓";
+        createBtn.disabled = true;
+        createBtn.classList.remove("loading");
+
+        // reveal & activate steps 2-4 + the listen strip
+        gated.forEach(function (el) {
+          // keep .gated so the .gated → .gated.unlocked opacity transition actually fires
+          el.classList.add("unlocked");
+        });
+        gated[0].classList.add("active");
+        listen.classList.remove("gated");
+        listen.classList.add("unlocked");
+
+        fl.toast && fl.toast("Project created — you're set up");
+
+        // ── STEP-listener: poll runs every 3s; first row → success card ──
+        startPolling(pid);
+
+        // let them into the (empty) dashboard immediately — don't force a wait for a CI run
+        if (!document.getElementById("goNow")) {
+          var goNow = document.createElement("a");
+          goNow.id = "goNow"; goNow.className = "btn pri"; goNow.href = "/app/overview.html";
+          goNow.textContent = "Open dashboard →";
+          goNow.style.marginTop = "16px"; goNow.style.alignSelf = "flex-start";
+          listen.insertAdjacentElement("afterend", goNow);
+        }
+      } catch (err) {
+        setBtnLoading(createBtn, false);
+        fl.toast && fl.toast((err && err.message) ? err.message : "Couldn't create project", "warn");
+      }
+    });
+
+    function startPolling(pid) {
+      if (pollTimer) clearInterval(pollTimer);
+      async function check() {
+        try {
+          var r = await sb.from("runs").select("id").eq("project_id", pid).limit(1);
+          if (!r.error && r.data && r.data.length) {
+            clearInterval(pollTimer); pollTimer = null;
+            listen.style.display = "none";
+            success.classList.add("show");
+            success.scrollIntoView({ behavior: "smooth", block: "center" });
+            fl.toast && fl.toast("First run received 🎉");
+          }
+        } catch (e) { /* transient — keep polling */ }
+      }
+      pollTimer = setInterval(check, 3000);
+      check(); // immediate first check
+    }
+
+    // ── demo data path ──
+    demoBtn.addEventListener("click", async function () {
+      // a project is required to attach demo data to — create a "demo" one if none yet
+      setBtnLoading(demoBtn, true);
+      demoBtn.querySelector(".lbl").textContent = "Loading demo…";
+      try {
+        var pid = fl.currentProject && fl.currentProject();
+        if (!pid) {
+          pid = await fl.createProject(orgId, "demo", "demo");
+          if (!pid) throw new Error("Couldn't create demo project");
+          await fl.mintToken(pid, "CI token");
+          fl.setProject(pid);
+        }
+        var ok = await window.faultlineSeedDemo(pid);
+        if (ok === false) throw new Error("Demo seed failed");
+        location.href = "/app/overview.html";
+      } catch (err) {
+        setBtnLoading(demoBtn, false);
+        demoBtn.querySelector(".lbl").textContent = "Load demo data instead";
+        fl.toast && fl.toast((err && err.message) ? err.message : "Couldn't load demo data", "warn");
+      }
+    });
+  })();
+  </script>
+</body>
+</html>

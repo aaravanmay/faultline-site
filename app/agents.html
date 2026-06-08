@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 28'%3E%3Cpath d='M3 10H17' stroke='%232563EB' stroke-width='3.4' fill='none' stroke-linecap='round'/%3E%3Cpath d='M17 10L23 18' stroke='%232563EB' stroke-width='3.4' fill='none' stroke-linecap='round'/%3E%3Cpath d='M23 18H37' stroke='%232563EB' stroke-width='3.4' fill='none' stroke-linecap='round'/%3E%3C/svg%3E">
+<title>Agents — faultline</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="app.css">
+<style>
+/* agents rollup — small additions on top of the shared design system */
+.ag-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));gap:14px}
+.ag-card{cursor:pointer;display:flex;flex-direction:column;gap:16px;transition:border-color .14s var(--ease),transform .14s var(--ease)}
+.ag-card:hover{border-color:var(--border2);transform:translateY(-2px)}
+.ag-top{display:flex;align-items:center;gap:11px}
+.ag-id{width:38px;height:38px;border-radius:9px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:15px;font-weight:600}
+.ag-id.blue{background:rgba(59,130,246,.15);color:var(--accent);border:1px solid rgba(59,130,246,.2)}
+.ag-id.indigo{background:rgba(129,140,248,.15);color:var(--indigo);border:1px solid rgba(129,140,248,.2)}
+.ag-id.cyan{background:rgba(56,189,248,.12);color:var(--cyan);border:1px solid rgba(56,189,248,.18)}
+.ag-id.amber{background:rgba(245,158,11,.12);color:var(--silent);border:1px solid rgba(245,158,11,.18)}
+.ag-name{font-weight:600;font-size:14.5px;letter-spacing:-.01em;line-height:1.25}
+.ag-fw{font-size:11.5px;color:var(--muted);font-family:var(--mono);margin-top:2px}
+.ag-body{display:flex;align-items:center;gap:16px}
+.ag-meta{display:flex;flex-direction:column;gap:5px;min-width:0;flex:1}
+.ag-last{font-size:11.5px;color:var(--muted)}
+.ag-trend{display:flex;align-items:center;gap:8px}
+.ag-trend .lbl2{font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);opacity:.7}
+.ag-foot{display:flex;align-items:center;gap:8px;border-top:1px solid var(--border);padding-top:13px;font-family:var(--mono);font-size:11.5px;color:var(--muted)}
+.ag-foot .dot{width:4px;height:4px;border-radius:50%;background:var(--faint)}
+.ag-foot.has-silent{color:var(--silent)}
+</style>
+</head>
+<body data-page="agents">
+<div class="app"><div id="shell"></div><main class="main" id="view"></main></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="/supabase-config.js"></script>
+<script src="/app/app.js"></script>
+<script>
+fl.ready(async function(ctx){
+  var view=document.getElementById('view'), pid=fl.currentProject();
+  view.innerHTML='<div class="wrap"><div class="skel" style="height:64px"></div>'+
+    '<div class="ag-grid"><div class="skel" style="height:188px"></div><div class="skel" style="height:188px"></div>'+
+    '<div class="skel" style="height:188px"></div></div></div>';
+  var ags=await fl.getAgents(pid);
+  if(!ags||!ags.length){ view.innerHTML=emptyAgents(ctx); return; }
+  view.innerHTML=renderAgents(ags, ctx);
+});
+
+function emptyAgents(ctx){
+  return '<div class="wrap"><div class="page-head"><div><div class="page-title">Agents</div>'+
+    '<div class="page-sub">'+fl.esc((ctx.project&&ctx.project.slug)||'project')+'</div></div></div>'+
+    '<div class="empty"><div class="seam"></div><h2>No agents yet</h2>'+
+    '<p>Each agent you run through a faultline suite shows up here with its resilience score and silent-failure history. Run your first check to register one.</p>'+
+    '<div class="listen"><span class="status-dot"></span> Waiting for your first agent…</div>'+
+    '<div class="row" style="gap:10px"><a class="btn pri" href="onboarding.html">Finish setup →</a>'+
+    '<a class="btn sec" href="overview.html">Back to overview</a></div></div></div>';
+}
+
+function renderAgents(ags, ctx){
+  // sort: most-recently-run first, agents with no runs trail
+  ags=ags.slice().sort(function(a,b){
+    var ta=a.latest?new Date(a.latest.created_at).getTime():0;
+    var tb=b.latest?new Date(b.latest.created_at).getTime():0;
+    return tb-ta;
+  });
+  var monitored=ags.length, silentTotal=ags.reduce(function(n,a){return n+((a.latest&&a.latest.silent_count)||0);},0);
+  var h='<div class="wrap">';
+  h+='<div class="page-head"><div><div class="page-title">Agents</div>'+
+     '<div class="page-sub">'+fl.esc((ctx.project&&((ctx.project.org_slug?ctx.project.org_slug+' / ':'')+ctx.project.slug))||'project')+
+     ' · '+monitored+' monitored'+(silentTotal>0?(' · <span class="am">'+silentTotal+' silent on last run</span>'):'')+'</div></div>'+
+     '<a class="btn ghost sm" href="runs.html">View all runs →</a></div>';
+
+  h+='<div class="ag-grid">';
+  ags.forEach(function(a){ h+=agentCard(a); });
+  h+='</div></div>';
+  return h;
+}
+
+function agentCard(a){
+  var name=a.name||'agent', color=fl.agentColor(name), letter=name[0].toUpperCase();
+  var L=a.latest, score=L?Math.round(L.resilience):0;
+  var hist=(a.history||[]).map(function(r){return +r.resilience;}).filter(function(v){return !isNaN(v);});
+  var spark=hist.length>1 ? fl.sparkline(hist,'#38BDF8',92,30) : '<span class="muted" style="font-size:11px;font-family:var(--mono)">— no trend</span>';
+  var allRuns=a.history||[];
+  var silent=allRuns.reduce(function(n,r){return n+(r.silent_count||0);},0);
+  var crash=allRuns.reduce(function(n,r){return n+(r.crash_count||0);},0);
+  var footCls=silent>0?'ag-foot has-silent':'ag-foot';
+  return '<div class="card card-pad ag-card hairline" onclick="location.href=\'runs.html?agent='+encodeURIComponent(name)+'\'">'+
+    '<div class="ag-top"><div class="ag-id '+color+'">'+fl.esc(letter)+'</div>'+
+      '<div style="min-width:0"><div class="ag-name">'+fl.esc(name)+'</div>'+
+        '<div class="ag-fw">'+fl.esc(a.framework||'—')+'</div></div></div>'+
+    '<div class="ag-body">'+
+      '<div class="ring-wrap" style="width:56px;height:56px">'+fl.ring(score,56)+'<div class="ring-text" style="font-size:13px">'+score+'%</div></div>'+
+      '<div class="ag-meta">'+
+        '<div class="ag-last">last run '+fl.rel(L&&L.created_at)+'</div>'+
+        '<div class="ag-trend"><span class="lbl2">trend</span>'+spark+(hist.length>1?'<span class="lbl2" style="margin-left:8px;font-family:var(--mono)">'+Math.round(hist[0])+'→'+Math.round(hist[hist.length-1])+'%</span>':'')+'</div>'+
+      '</div></div>'+
+    '<div class="'+footCls+'"><span>'+silent+' silent</span><span class="dot"></span><span'+(crash>0?' style="color:#9aa3b2"':'')+'>'+crash+' crash</span><span class="dot"></span><span style="color:var(--muted)">'+allRuns.length+' runs</span></div>'+
+    '</div>';
+}
+</script>
+</body>
+</html>

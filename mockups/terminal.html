@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>faultline terminal mockup</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    width: 100%;
+    height: 100%;
+    background: transparent;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'JetBrains Mono', 'Fira Mono', 'Cascadia Code', monospace;
+  }
+
+  /* ─── Window shell ─── */
+  .window {
+    width: 680px;
+    border-radius: 12px;
+    border: 1px solid rgba(255,255,255,0.08);
+    box-shadow:
+      0 32px 64px rgba(0,0,0,0.72),
+      0 8px 24px rgba(0,0,0,0.48),
+      0 2px 6px rgba(0,0,0,0.36);
+    overflow: hidden;
+    background: #0B0E14;
+    position: relative;
+  }
+
+  /* faint top-inner highlight */
+  .window::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 12px;
+    pointer-events: none;
+    background: linear-gradient(
+      180deg,
+      rgba(255,255,255,0.055) 0%,
+      rgba(255,255,255,0)     48px
+    );
+    z-index: 1;
+  }
+
+  /* ─── Title bar ─── */
+  .titlebar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 13px 16px 12px;
+    background: #141820;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    position: relative;
+    z-index: 2;
+    /* subtle gradient sheen on titlebar itself */
+    background: linear-gradient(180deg, #181d27 0%, #131720 100%);
+  }
+
+  /* traffic lights */
+  .dots {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+  .dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+  }
+  .dot.close  { background: #FF5F56; box-shadow: 0 0 0 0.5px rgba(0,0,0,0.3) inset; }
+  .dot.min    { background: #FFBD2E; box-shadow: 0 0 0 0.5px rgba(0,0,0,0.3) inset; }
+  .dot.max    { background: #27C93F; box-shadow: 0 0 0 0.5px rgba(0,0,0,0.3) inset; }
+
+  .title-text {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 12.5px;
+    font-weight: 500;
+    color: rgba(196, 204, 216, 0.55);
+    letter-spacing: 0.01em;
+    white-space: nowrap;
+    user-select: none;
+  }
+
+  /* right side spacer to balance dots */
+  .dots-spacer { width: 44px; }
+
+  /* ─── Body ─── */
+  .body {
+    padding: 22px 26px 28px;
+    font-size: 13.5px;
+    line-height: 1.7;
+    color: #C4CCD8;
+    position: relative;
+    z-index: 2;
+    min-height: 220px;
+  }
+
+  /* ─── Token colours ─── */
+  .prompt-dollar { color: #46E0FF; }
+  .cmd-name      { color: #2D7EF8; font-weight: 600; }
+  .cmd-rest      { color: #C4CCD8; }
+
+  .report-header { color: #2D7EF8; font-weight: 600; }
+  .report-name   { color: #2D7EF8; font-weight: 600; }
+
+  .status-pass   { color: #46E0FF; }
+  .status-fail   { color: #C98A2B; }
+  .status-crash  { color: #8A93A6; }
+
+  .label-pass    { color: #46E0FF; font-weight: 500; }
+  .label-fail    { color: #C98A2B; font-weight: 500; }
+  .label-crash   { color: #8A93A6; font-weight: 500; }
+
+  .runs-pass     { color: #46E0FF; }
+  .runs-fail     { color: #C98A2B; }
+  .runs-crash    { color: #8A93A6; }
+
+  .sep-line      { color: rgba(196,204,216,0.2); }
+  .resilience    { color: #C4CCD8; }
+  .warn-line     { color: #C98A2B; }
+  .suggest       { color: rgba(196,204,216,0.65); }
+
+  .blank-line    { display: block; height: 1.7em; }
+
+  /* ─── Cursor ─── */
+  .cursor {
+    display: inline-block;
+    width: 8px;
+    height: 14px;
+    background: #46E0FF;
+    vertical-align: text-bottom;
+    margin-left: 1px;
+    border-radius: 1px;
+    animation: blink 1.1s step-start infinite;
+    opacity: 0;
+  }
+  @keyframes blink {
+    0%, 49% { opacity: 1; }
+    50%, 100% { opacity: 0; }
+  }
+  .cursor.visible { opacity: 1; }
+  .cursor.paused { animation: none; opacity: 1; }
+
+  /* ─── Lines hidden until typed ─── */
+  .line { display: block; white-space: pre; }
+</style>
+</head>
+<body>
+
+<div class="window">
+  <!-- Title bar -->
+  <div class="titlebar">
+    <div class="dots">
+      <div class="dot close"></div>
+      <div class="dot min"></div>
+      <div class="dot max"></div>
+    </div>
+    <span class="title-text">faultline — zsh</span>
+    <div class="dots-spacer"></div>
+  </div>
+
+  <!-- Terminal body -->
+  <div class="body" id="termBody">
+    <!-- content injected by JS -->
+    <span class="cursor paused" id="cursor"></span>
+  </div>
+</div>
+
+<script>
+// ─────────────────────────────────────────────────────────────
+// Terminal content definition
+// Each entry: { type, content[] }
+// type: 'prompt' | 'output' | 'blank' | 'separator'
+// content: array of {text, cls?} spans
+// ─────────────────────────────────────────────────────────────
+// ── real output from `faultline run faultline_suite.py` (the OSS engine) ──
+const LINES = [
+  {
+    type: 'prompt',
+    parts: [
+      { text: '$ ',          cls: 'prompt-dollar' },
+      { text: 'faultline',    cls: 'cmd-name'      },
+      { text: ' run faultline_suite.py', cls: 'cmd-rest' },
+    ]
+  },
+  { type: 'blank' },
+  { type: 'output', parts: [ { text: 'faultline', cls: 'report-name' }, { text: ' · resilience report', cls: 'cmd-rest' } ] },
+  { type: 'output', parts: [{ text: '============================================', cls: 'sep-line' }] },
+  { type: 'output', parts: [ { text: 'baseline (no faults): ', cls: 'suggest' }, { text: '✓ agent is correct', cls: 'status-pass' } ] },
+  { type: 'output', parts: [{ text: '--------------------------------------------', cls: 'sep-line' }] },
+  { type: 'output', parts: [
+      { text: '⚠ ', cls: 'status-fail' },
+      { text: 'wrong-number  ', cls: 'label-fail' },
+      { text: 'SILENT-WRONG  ', cls: 'label-fail' },
+      { text: 'bought out-of-stock, no error', cls: 'suggest' },
+  ] },
+  { type: 'output', parts: [
+      { text: '✗ ', cls: 'status-crash' },
+      { text: 'timeout       ', cls: 'label-crash' },
+      { text: 'CRASH         ', cls: 'label-crash' },
+      { text: 'unhandled TimeoutError', cls: 'suggest' },
+  ] },
+  { type: 'output', parts: [
+      { text: '✗ ', cls: 'status-crash' },
+      { text: 'server-error  ', cls: 'label-crash' },
+      { text: 'CRASH         ', cls: 'label-crash' },
+      { text: 'unhandled HTTP 500', cls: 'suggest' },
+  ] },
+  { type: 'output', parts: [
+      { text: '✗ ', cls: 'status-crash' },
+      { text: 'null-response ', cls: 'label-crash' },
+      { text: 'CRASH         ', cls: 'label-crash' },
+      { text: 'unhandled TypeError', cls: 'suggest' },
+  ] },
+  { type: 'output', parts: [{ text: '--------------------------------------------', cls: 'sep-line' }] },
+  { type: 'output', parts: [{ text: 'Resilience score: 0%  (0/4 faults handled)', cls: 'resilience' }] },
+  { type: 'output', parts: [{ text: '⚠ 1 SILENT failure — a WRONG answer with NO error.', cls: 'warn-line' }] },
+  { type: 'output', parts: [{ text: '  It passes every normal test. That is the danger.', cls: 'suggest' }] },
+];
+
+// ─────────────────────────────────────────────────────────────
+// Renderer helpers
+// ─────────────────────────────────────────────────────────────
+const body   = document.getElementById('termBody');
+const cursor = document.getElementById('cursor');
+
+function makeLine(parts) {
+  const span = document.createElement('span');
+  span.className = 'line';
+  for (const p of parts) {
+    const s = document.createElement('span');
+    if (p.cls) s.className = p.cls;
+    s.textContent = p.text;
+    span.appendChild(s);
+  }
+  return span;
+}
+
+function makeBlank() {
+  const span = document.createElement('span');
+  span.className = 'blank-line';
+  return span;
+}
+
+// ─────────────────────────────────────────────────────────────
+// Typewriter for the prompt line
+// ─────────────────────────────────────────────────────────────
+function typePrompt(parts, onDone) {
+  const lineEl = document.createElement('span');
+  lineEl.className = 'line';
+  body.insertBefore(lineEl, cursor);
+
+  // Build empty span elements for each part
+  const spans = parts.map(p => {
+    const s = document.createElement('span');
+    if (p.cls) s.className = p.cls;
+    lineEl.appendChild(s);
+    return { el: s, text: p.text };
+  });
+
+  let partIdx = 0;
+  let charIdx = 0;
+
+  function tick() {
+    if (partIdx >= spans.length) {
+      onDone();
+      return;
+    }
+    const cur = spans[partIdx];
+    if (charIdx < cur.text.length) {
+      cur.el.textContent += cur.text[charIdx];
+      charIdx++;
+      setTimeout(tick, 28 + Math.random() * 18);
+    } else {
+      partIdx++;
+      charIdx = 0;
+      setTimeout(tick, partIdx === 1 ? 0 : 10);
+    }
+  }
+  tick();
+}
+
+// ─────────────────────────────────────────────────────────────
+// Sequence: type prompt → wait → flush output lines
+// ─────────────────────────────────────────────────────────────
+function run() {
+  // Show cursor immediately (blinking while typing)
+  cursor.classList.remove('paused');
+  cursor.classList.add('visible');
+
+  const promptLine = LINES[0];
+  const outputLines = LINES.slice(1);
+
+  typePrompt(promptLine.parts, () => {
+    // Brief pause after prompt, as if hitting Enter
+    setTimeout(() => {
+      // Move cursor to next line area
+      flushOutput(outputLines, 0);
+    }, 420);
+  });
+}
+
+function flushOutput(lines, idx) {
+  if (idx >= lines.length) {
+    // Done — cursor settles into blinking
+    cursor.classList.remove('visible');
+    cursor.classList.add('paused');
+    return;
+  }
+
+  const entry = lines[idx];
+  let el;
+
+  if (entry.type === 'blank') {
+    el = makeBlank();
+  } else {
+    el = makeLine(entry.parts);
+  }
+
+  body.insertBefore(el, cursor);
+
+  // Stagger delay: slightly longer for first line (command output start)
+  const delay = idx === 0 ? 60 : 40;
+  setTimeout(() => flushOutput(lines, idx + 1), delay);
+}
+
+// Kick off after a short initial pause
+window.addEventListener('DOMContentLoaded', () => {
+  setTimeout(run, 600);
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,256 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 28'%3E%3Cpath d='M3 10H17' stroke='%232563EB' stroke-width='3.4' fill='none' stroke-linecap='round'/%3E%3Cpath d='M17 10L23 18' stroke='%232563EB' stroke-width='3.4' fill='none' stroke-linecap='round'/%3E%3Cpath d='M23 18H37' stroke='%232563EB' stroke-width='3.4' fill='none' stroke-linecap='round'/%3E%3C/svg%3E">
+<title>Run — faultline</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="app.css">
+<style>
+/* run-detail extras — built on the same CSS variables as app.css */
+.vbanner{display:flex;align-items:flex-start;gap:14px;padding:16px 20px;border-radius:var(--radius);box-shadow:var(--sh-sm)}
+.vbanner .ic{width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.vbanner .vt{font-size:15px;font-weight:650;letter-spacing:-.01em}
+.vbanner .vd{font-size:12.5px;margin-top:3px;opacity:.92}
+.vbanner.fail{background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.25);color:#f5c074}
+.vbanner.fail .ic{background:rgba(245,158,11,.16);color:var(--silent)}
+.vbanner.crash{background:rgba(107,114,128,.14);border:1px solid rgba(107,114,128,.3);color:#aab2c0}
+.vbanner.crash .ic{background:rgba(107,114,128,.22);color:#c4cad6}
+.vbanner.pass{background:rgba(56,189,248,.08);border:1px solid rgba(56,189,248,.2);color:#9cdcff}
+.vbanner.pass .ic{background:rgba(56,189,248,.14);color:var(--cyan)}
+.meta-strip{display:flex;align-items:center;flex-wrap:wrap;gap:8px 14px;font-family:var(--mono);font-size:12px;color:var(--muted)}
+.meta-strip .dot{width:3px;height:3px;border-radius:50%;background:var(--faint)}
+.fx{font-family:var(--mono);font-size:12px;color:var(--text2)}
+.fx .cat{font-size:9.5px;color:var(--faint);text-transform:uppercase;letter-spacing:.06em;margin-top:2px}
+.cell-what{color:var(--text2);max-width:340px}
+.cell-fix{color:var(--muted);max-width:260px}
+.trust-li{display:flex;gap:10px;padding:9px 0;border-bottom:1px solid rgba(28,32,44,.7);font-size:12.5px;color:var(--text2)}
+.trust-li:last-child{border-bottom:none}
+.trust-li .tic{color:var(--faint);flex-shrink:0;margin-top:1px}
+.cmp-li{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid rgba(28,32,44,.7);font-size:12.5px}
+.cmp-li:last-child{border-bottom:none}
+.cmp-arrow{color:var(--muted);font-family:var(--mono);font-size:11px}
+</style>
+</head>
+<body data-page="runs">
+<div class="app"><div id="shell"></div><main class="main" id="view"></main></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="/supabase-config.js"></script>
+<script src="/app/app.js"></script>
+<script>
+fl.ready(async function(ctx){
+  var view=document.getElementById('view');
+  view.innerHTML='<div class="wrap"><div class="skel" style="height:64px"></div><div class="skel" style="height:120px"></div><div class="skel" style="height:240px"></div></div>';
+  var id=fl.qs('run');
+  if(!id){ view.innerHTML=notFound(); return; }
+  var res=await fl.getRun(id);
+  var run=res.run, faults=res.faults||[], prev=res.prev;
+  if(!run){ view.innerHTML=notFound(); return; }
+  view.innerHTML=renderRun(run, faults, prev);
+});
+
+function notFound(){
+  return '<div class="wrap"><div class="empty"><div class="seam"></div><h2>Run not found</h2>'+
+    '<p>This run may have been removed, or the link points to a run that was never recorded. Head back to see the runs faultline has captured.</p>'+
+    '<div class="row" style="gap:10px"><a class="btn pri" href="runs.html">← All runs</a>'+
+    '<a class="btn sec" href="overview.html">Overview</a></div></div></div>';
+}
+
+function renderRun(run, faults, prev){
+  var v=fl.runVerdict(run);
+  var sha=(run.git_sha||run.id||'').slice(0,7);
+  var score=Math.round(+run.resilience||0);
+  var handled=(run.faults_handled!=null?run.faults_handled:Math.max(0,(run.faults_total||0)-((run.silent_count||0)+(run.crash_count||0))));
+  var total=run.faults_total!=null?run.faults_total:faults.length;
+
+  var h='<div class="wrap">';
+
+  // ── page head ──
+  h+='<div class="page-head"><div><div class="page-title">Run '+
+     '<span class="mono" style="font-size:15px;color:var(--muted)">#'+fl.esc(sha)+'</span></div>'+
+     '<div class="page-sub"><a href="agents.html" style="color:var(--cyan)">'+fl.esc(run.agent_name||'agent')+'</a> · '+fl.rel(run.created_at)+'</div></div>'+
+     '<div class="row" style="gap:10px">'+
+       '<button class="btn sec sm" onclick="fl.toast(\'Re-running fault check for '+fl.esc(run.agent_name||'agent').replace(/\'/g,"")+'\')">'+
+         '<svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M11 6.5a4.5 4.5 0 1 1-1.3-3.2M11 2v2.5H8.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg> Re-run check</button>'+
+       '<button class="btn sec sm" id="copyReport"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><rect x="3" y="3" width="7.5" height="9" rx="1.3" stroke="currentColor" stroke-width="1.2"/><path d="M3 3V1.8h6.2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg> Copy report</button>'+
+     '</div></div>';
+
+  // ── 1) verdict banner ──
+  var bIc, bTitle, bDetail;
+  if(v==='fail'){
+    bIc='⚠'; bTitle='Silent failure caught';
+    var worst=worstFault(faults);
+    bDetail=worst ? (worst.fault+': '+(worst.detail||'agent returned a wrong answer with no error.')) : 'The agent produced a wrong answer with no error raised — exactly the failure your tests miss.';
+  } else if(v==='crash'){
+    bIc='✕'; bTitle='Agent crashed under a fault';
+    var crashF=faults.filter(function(f){return (f.verdict||'').toLowerCase()==='crash';})[0];
+    bDetail=crashF ? (crashF.fault+': '+(crashF.detail||'the agent threw an unhandled exception when the tool misbehaved.')) : 'The agent threw an unhandled exception when a tool misbehaved.';
+  } else if(v==='inconclusive'){
+    bIc='—'; bTitle='Inconclusive'; bDetail='No faults ran against this agent yet, so resilience can’t be judged.';
+  } else {
+    bIc='✓'; bTitle='Resilient — all faults handled';
+    bDetail='The agent caught or recovered from every injected fault. No silent wrong answers, no crashes.';
+  }
+  var bClass=(v==='inconclusive')?'crash':v;
+  h+='<div class="vbanner '+bClass+'"><div class="ic">'+bIc+'</div>'+
+     '<div><div class="vt">'+fl.esc(bTitle)+'</div><div class="vd">'+fl.esc(bDetail)+'</div></div></div>';
+
+  // ── 2) metadata strip + resilience ring ──
+  var bits=[];
+  bits.push('#'+fl.esc(sha));
+  bits.push(fl.esc(run.agent_name||'agent'));
+  if(run.git_branch||run.git_sha) bits.push(fl.esc((run.git_branch?run.git_branch+' ':'')+(run.git_sha?run.git_sha.slice(0,6):'')).trim());
+  bits.push((run.trials_per_fault||(faults[0]&&faults[0].trials&&faults[0].trials.length)||0)+' trials/fault');
+  bits.push(((run.duration_ms||0)/1000).toFixed(1)+'s');
+  bits.push(fl.rel(run.created_at));
+  if(run.source) bits.push(fl.esc(run.source));
+  var strip='';
+  bits.forEach(function(b,i){ if(i) strip+='<span class="dot"></span>'; strip+='<span>'+b+'</span>'; });
+
+  h+='<div class="card glow card-pad hairline" style="display:flex;align-items:center;gap:24px;flex-wrap:wrap">'+
+       '<div class="ring-wrap">'+fl.ring(score,72)+'<div class="ring-text">'+score+'%</div></div>'+
+       '<div style="flex:1;min-width:220px">'+
+         '<div class="page-sub" style="text-transform:uppercase;letter-spacing:.06em;font-weight:600">Resilience score</div>'+
+         '<div style="font-size:28px;font-weight:700;letter-spacing:-.02em;line-height:1.1">'+score+'<span class="muted" style="font-size:15px;font-weight:400">%</span></div>'+
+         '<div class="mono" style="font-size:12px;color:var(--muted);margin-top:4px">'+handled+' / '+total+' faults handled</div>'+
+       '</div>'+
+       '<div style="width:1px;align-self:stretch;background:var(--border)"></div>'+
+       '<div style="min-width:180px"><div class="page-sub" style="text-transform:uppercase;letter-spacing:.06em;font-weight:600;margin-bottom:8px">Run metadata</div>'+
+         '<div class="meta-strip">'+strip+'</div></div>'+
+     '</div>';
+
+  // ── 3) the fault matrix ──
+  h+='<div class="card glow hairline"><div class="card-head"><div><div class="card-title">Fault matrix</div>'+
+     '<div class="card-meta">One row per injected fault · '+(run.trials_per_fault||(faults[0]&&faults[0].trials&&faults[0].trials.length)||0)+' trials each</div></div>'+
+     '<a class="btn ghost sm" href="faults.html">Fault library →</a></div>';
+
+  if(!faults.length){
+    h+='<div class="empty" style="box-shadow:none;border:none;padding:44px 32px"><div class="seam"></div>'+
+       '<h2>No faults injected</h2><p>This run recorded a baseline but no faults were armed against the agent. Add faults to your suite to find where it silently breaks.</p>'+
+       '<a class="btn pri" href="faults.html">Browse the fault library →</a></div>';
+  } else {
+    h+='<table><thead><tr><th>Fault</th><th>Verdict</th><th>Trials</th><th>What happened</th><th>Suggested fix</th></tr></thead><tbody>';
+    faults.forEach(function(f){
+      var fv=fl.verdictClass(f.verdict);
+      h+='<tr style="cursor:default">'+
+        '<td><div class="fx">'+fl.esc(f.fault||'—')+'<div class="cat">'+fl.esc(f.category||catOf(f.fault))+'</div></div></td>'+
+        '<td><span class="verdict '+fv+'">'+fl.verdictLabel(f.verdict)+'</span></td>'+
+        '<td>'+trialDots(f.trials)+'</td>'+
+        '<td class="cell-what">'+fl.esc(f.detail||'—')+'</td>'+
+        '<td class="cell-fix">'+(f.suggested_fix?fl.esc(f.suggested_fix):'—')+'</td></tr>';
+    });
+    h+='</tbody></table>';
+  }
+  h+='</div>';
+
+  // ── 4) baseline note ──
+  var okBase=run.baseline_ok;
+  h+='<div class="banner '+(okBase===false?'warn':'info')+'">'+
+     (okBase===false
+        ? '<svg width="15" height="15" viewBox="0 0 15 15" fill="none"><path d="M7.5 1.5 14 13H1z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/><path d="M7.5 6v3M7.5 11h.01" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg> <span><b>Baseline CRASHED</b> before any fault was injected — fix that first. The fault results below can’t be trusted until the agent runs clean with no faults.</span>'
+        : '<svg width="15" height="15" viewBox="0 0 15 15" fill="none"><circle cx="7.5" cy="7.5" r="6" stroke="currentColor" stroke-width="1.2"/><path d="M5 7.7 6.8 9.5 10 5.8" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg> <span><b>Baseline (no fault): agent ran OK.</b> The agent produced the correct answer with all tools healthy, so the verdicts below reflect fault behavior, not a pre-existing bug.</span>')+
+     '</div>';
+
+  // ── 5) "what faultline did NOT see" trust panel ──
+  h+='<div class="card hairline"><div class="card-head"><div><div class="card-title">What faultline did NOT see</div>'+
+     '<div class="card-meta">Scope of this check, stated plainly — so a green score isn’t mistaken for full coverage</div></div></div>'+
+     '<div class="card-pad" style="padding-top:14px;padding-bottom:16px">'+
+       trustLi('Only the '+(total||0)+' fault'+(total===1?'':'s')+' in this run’s suite were injected. Faults you didn’t arm can still break this agent in production.')+
+       trustLi('Each fault ran '+(run.trials_per_fault||(faults[0]&&faults[0].trials&&faults[0].trials.length)||0)+' trial'+((run.trials_per_fault||1)===1?'':'s')+'. Rare, nondeterministic failures may not surface at this trial count.')+
+       trustLi('Correctness is judged by your oracle. faultline only perturbs tool responses — it never decides what “right” means, and can’t catch a wrong answer your oracle accepts.')+
+       trustLi('Real-world fault combinations (two tools failing at once, cascades A→B, long-context erosion) are not covered unless explicitly added.')+
+     '</div></div>';
+
+  // ── 6) compare strip vs prev ──
+  if(prev){
+    var changes=diffVerdicts(faults, prev);
+    var prevSha=(prev.git_sha||prev.id||'').slice(0,7);
+    h+='<div class="card hairline"><div class="card-head"><div><div class="card-title">Compared to previous run</div>'+
+       '<div class="card-meta">vs <span class="mono">#'+fl.esc(prevSha)+'</span> · '+fl.rel(prev.created_at)+'</div></div>'+
+       '<a class="btn ghost sm" href="run.html?run='+fl.esc(prev.id)+'">Open previous →</a></div>'+
+       '<div class="card-pad" style="padding-top:14px;padding-bottom:16px">';
+    if(!changes.length){
+      h+='<div class="muted" style="font-size:12.5px">No verdict changes — every fault landed the same way as the previous run.</div>';
+    } else {
+      changes.forEach(function(c){
+        h+='<div class="cmp-li"><span class="fx">'+fl.esc(c.fault)+'</span>'+
+           '<span class="verdict '+fl.verdictClass(c.from)+'">'+fl.verdictLabel(c.from)+'</span>'+
+           '<span class="cmp-arrow">→</span>'+
+           '<span class="verdict '+fl.verdictClass(c.to)+'">'+fl.verdictLabel(c.to)+'</span>'+
+           (c.regressed?'<span class="fault-tag" style="color:var(--silent);border-color:rgba(245,158,11,.25);background:rgba(245,158,11,.1)">regressed</span>'
+                       :'<span class="fault-tag" style="color:var(--cyan);border-color:rgba(56,189,248,.18);background:rgba(56,189,248,.08)">improved</span>')+
+           '</div>';
+      });
+    }
+    h+='</div></div>';
+  }
+
+  h+='</div>';
+  // copy-report handler — attached after innerHTML is set
+  setTimeout(function(){
+    var btn=document.getElementById('copyReport');
+    if(btn) btn.addEventListener('click', function(){ fl.copy(reportText(run, faults, prev), btn); });
+  }, 0);
+  return h;
+}
+
+// ── helpers ──
+function trialDots(trials){
+  if(!trials||!trials.length) return '<span class="muted mono" style="font-size:11px">—</span>';
+  return '<span class="trial-dots">'+trials.map(function(t){ return '<span class="tdot '+fl.esc((t||'').toUpperCase())+'"></span>'; }).join('')+'</span>';
+}
+function catOf(fault){
+  var silent=['wrong-number','stale-data','truncate','null-response'];
+  return silent.indexOf((fault||'').toLowerCase())>=0?'silent':'hard';
+}
+function worstFault(faults){
+  // silent (fail) is the headline; then crash; else first
+  var f=faults.filter(function(x){return (x.verdict||'').toLowerCase()==='fail';})[0];
+  if(f) return f;
+  f=faults.filter(function(x){return (x.verdict||'').toLowerCase()==='crash';})[0];
+  return f||faults[0]||null;
+}
+function trustLi(text){
+  return '<div class="trust-li"><span class="tic">·</span><span>'+fl.esc(text)+'</span></div>';
+}
+var VRANK={pass:0,inconclusive:1,crash:2,fail:3};
+function diffVerdicts(faults, prev){
+  // prev.fault_results may not be loaded; getRun returns only the current run's faults.
+  // Compare by the per-fault verdict map embedded on prev if present, else fall back to prev summary.
+  var prevMap={};
+  if(prev && prev.fault_results && prev.fault_results.length){
+    prev.fault_results.forEach(function(p){ prevMap[(p.fault||'').toLowerCase()]=fl.verdictClass(p.verdict); });
+  } else { return []; }
+  var out=[];
+  faults.forEach(function(f){
+    var key=(f.fault||'').toLowerCase();
+    var to=fl.verdictClass(f.verdict), from=prevMap[key];
+    if(from && from!==to){
+      out.push({ fault:f.fault, from:from, to:to, regressed:(VRANK[to]||0)>(VRANK[from]||0) });
+    }
+  });
+  return out;
+}
+function reportText(run, faults, prev){
+  var v=fl.runVerdict(run), sha=(run.git_sha||run.id||'').slice(0,7);
+  var lines=[];
+  lines.push('faultline run report — #'+sha);
+  lines.push('agent: '+(run.agent_name||'agent'));
+  lines.push('verdict: '+fl.verdictLabel(v).toUpperCase());
+  lines.push('resilience: '+Math.round(+run.resilience||0)+'%');
+  lines.push('when: '+(run.created_at||''));
+  lines.push('baseline: '+(run.baseline_ok===false?'CRASHED':'ok'));
+  lines.push('');
+  lines.push('faults:');
+  faults.forEach(function(f){
+    lines.push('  - '+(f.fault||'?')+' → '+fl.verdictLabel(f.verdict).toUpperCase()+
+      (f.detail?('  | '+f.detail):'')+
+      (f.suggested_fix?('  | fix: '+f.suggested_fix):''));
+  });
+  return lines.join('\n');
+}
+</script>
+</body>
+</html>

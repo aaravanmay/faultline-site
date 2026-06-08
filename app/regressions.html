@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 28'%3E%3Cpath d='M3 10H17' stroke='%232563EB' stroke-width='3.4' fill='none' stroke-linecap='round'/%3E%3Cpath d='M17 10L23 18' stroke='%232563EB' stroke-width='3.4' fill='none' stroke-linecap='round'/%3E%3Cpath d='M23 18H37' stroke='%232563EB' stroke-width='3.4' fill='none' stroke-linecap='round'/%3E%3C/svg%3E">
+<title>Replay — faultline</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="app.css">
+<style>
+/* small additions, reusing design-system variables */
+.reg-arrow{color:var(--faint);font-family:var(--mono);font-size:12px;margin:0 2px}
+.reg-change{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.reg-status{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;letter-spacing:.03em;text-transform:uppercase;padding:3px 9px;border-radius:20px;white-space:nowrap}
+.reg-status::before{content:"";width:5px;height:5px;border-radius:50%;background:currentColor;flex-shrink:0}
+.reg-status.open{background:rgba(245,158,11,.12);color:var(--silent);border:1px solid rgba(245,158,11,.22)}
+.reg-status.resolved{background:rgba(56,189,248,.1);color:var(--cyan);border:1px solid rgba(56,189,248,.2)}
+.reg-status.ignored{background:rgba(130,138,154,.1);color:var(--muted);border:1px dashed rgba(130,138,154,.4)}
+.reg-actions{display:inline-flex;gap:8px;justify-content:flex-end}
+.reg-resolved-when{font-family:var(--mono);font-size:11px;color:var(--faint)}
+</style>
+</head>
+<body data-page="regressions">
+<div class="app"><div id="shell"></div><main class="main" id="view"></main></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="/supabase-config.js"></script>
+<script src="/app/app.js"></script>
+<script>
+// Static replay-mode mock — real finding from faultline
+var MOCK_REPLAYS = [
+  { id:'r1', agent_name:'refund-agent', trace:'trace-2024-06-01-refund', change:'claude-3-5-sonnet → claude-3-7-sonnet',
+    finding:'DECLINE silently flipped to REFUND after model bump', rule:'refund_requires_eligibility_check',
+    status:'open', detected_at: new Date(Date.now()-4*3600000).toISOString(), from_verdict:'pass', to_verdict:'fail', git_sha:'a3f7c12' },
+  { id:'r2', agent_name:'support-agent', trace:'trace-2024-05-28-support', change:'prompt v4 → v5 (tone tweak)',
+    finding:'began recommending product returns on first contact (policy change slipped through)', rule:'no_premature_return_recommendation',
+    status:'resolved', detected_at: new Date(Date.now()-9*86400000).toISOString(), resolved_at: new Date(Date.now()-7*86400000).toISOString(), from_verdict:'pass', to_verdict:'fail', git_sha:'9b2e441' },
+  { id:'r3', agent_name:'order-agent', trace:'trace-2024-05-20-order', change:'tool schema update (inventory field renamed)',
+    finding:'started treating missing inventory field as 0 — blocked in-stock orders', rule:'inventory_null_is_not_zero',
+    status:'resolved', detected_at: new Date(Date.now()-19*86400000).toISOString(), resolved_at: new Date(Date.now()-17*86400000).toISOString(), from_verdict:'pass', to_verdict:'fail', git_sha:'c7d3b85' }
+];
+
+fl.ready(async function(ctx){
+  var view=document.getElementById('view');
+  view.innerHTML='<div class="wrap"><div class="skel" style="height:64px"></div><div class="skel" style="height:300px"></div></div>';
+  var regs=await fl.getRegressions(ctx.orgId);
+  view.innerHTML=render(regs, ctx);
+});
+
+function render(regs, ctx){
+  var openN=(regs||[]).filter(function(r){return r.status==='open';}).length;
+  // combine live DB regressions + mock replay rows (mock first so demo is always visible)
+  var allRows = MOCK_REPLAYS.slice();
+
+  var sub=fl.esc((ctx.project&&((ctx.project.org_slug?ctx.project.org_slug+' / ':'')+ctx.project.slug))||'project');
+  var totalOpen = MOCK_REPLAYS.filter(function(r){return r.status==='open';}).length + openN;
+
+  var h='<div class="wrap">';
+  h+='<div class="page-head"><div>'+
+     '<div class="page-title">Regressions</div>'+
+     '<div class="page-sub">'+sub+' · '+
+     (totalOpen?(totalOpen+' open'):'all clear')+'</div>'+
+     '</div></div>';
+
+  // replay findings table
+  h+='<div class="card glow hairline"><div class="card-head"><div>'+
+     '<div class="card-title">Replay regressions</div>'+
+     '<div class="card-meta">Behavior that changed after a model bump or prompt edit · open first</div></div></div>'+
+     '<table><thead><tr>'+
+     '<th>Agent</th><th>Change that triggered it</th><th>Finding</th><th>Detected</th><th>Status</th><th>Actions</th>'+
+     '</tr></thead><tbody>';
+
+  allRows.sort(function(a,b){
+    var ao=a.status==='open'?0:1, bo=b.status==='open'?0:1;
+    if(ao!==bo) return ao-bo;
+    return new Date(b.detected_at).getTime()-new Date(a.detected_at).getTime();
+  }).forEach(function(r){
+    var nm=r.agent_name||'agent';
+    h+='<tr>'+
+       '<td><div class="cell-agent">'+
+         '<div class="agent-ic '+fl.agentColor(nm)+'">'+fl.esc(nm[0].toUpperCase())+'</div>'+
+         '<div><div class="agent-nm">'+fl.esc(nm)+'</div>'+
+         (r.git_sha?('<div class="agent-rid">#'+fl.esc(r.git_sha.slice(0,7))+'</div>'):'')+'</div></div></td>'+
+       '<td style="font-size:12px;color:var(--muted);max-width:180px">'+fl.esc(r.change||'—')+'</td>'+
+       '<td style="font-size:12px;color:var(--text2);max-width:240px">'+fl.esc(r.finding||r.detail||'—')+'</td>'+
+       '<td><div class="when">'+fl.rel(r.detected_at)+'</div></td>'+
+       '<td><span class="reg-status '+statusClass(r.status)+'">'+statusLabel(r.status)+'</span></td>'+
+       '<td>'+actionsCell(r)+'</td>'+
+       '</tr>';
+  });
+
+  // also append any live DB regressions from the chaos/resilience suite
+  if(regs && regs.length){
+    regs.slice().sort(function(a,b){
+      var ao=a.status==='open'?0:1, bo=b.status==='open'?0:1;
+      if(ao!==bo) return ao-bo;
+      return new Date(b.detected_at).getTime()-new Date(a.detected_at).getTime();
+    }).forEach(function(r){
+      var fv=fl.verdictClass(r.from_verdict), tv=fl.verdictClass(r.to_verdict);
+      var nm=r.agent_name||'agent';
+      h+='<tr>'+
+         '<td><div class="cell-agent">'+
+           '<div class="agent-ic '+fl.agentColor(nm)+'">'+fl.esc(nm[0].toUpperCase())+'</div>'+
+           '<div><div class="agent-nm">'+fl.esc(nm)+'</div></div></div></td>'+
+         '<td style="font-size:12px;color:var(--muted)">chaos suite regression</td>'+
+         '<td style="font-size:12px;color:var(--text2);max-width:240px">'+fl.esc(r.detail||r.fault||'—')+'</td>'+
+         '<td><div class="when">'+fl.rel(r.detected_at)+'</div>'+
+           (r.git_sha?('<div class="agent-rid">#'+fl.esc(r.git_sha.slice(0,7))+'</div>'):'')+'</td>'+
+         '<td><span class="reg-status '+statusClass(r.status)+'">'+statusLabel(r.status)+'</span></td>'+
+         '<td>'+actionsCell(r)+'</td>'+
+         '</tr>';
+    });
+  }
+
+  h+='</tbody></table></div></div>';
+  return h;
+}
+
+function statusClass(s){ s=(s||'').toLowerCase(); return s==='resolved'?'resolved':s==='ignored'?'ignored':'open'; }
+function statusLabel(s){ s=(s||'').toLowerCase(); return s==='resolved'?'Resolved':s==='ignored'?'Ignored':'Open'; }
+
+function actionsCell(r){
+  if(r.status==='open'){
+    return '<span class="reg-actions">'+
+      '<button class="btn sec sm" onclick="resolveReg(this,\''+fl.esc(r.id)+'\',\'resolved\')">Resolve</button>'+
+      '<button class="btn ghost sm" onclick="resolveReg(this,\''+fl.esc(r.id)+'\',\'ignored\')">Ignore</button>'+
+      '</span>';
+  }
+  return '<span class="reg-resolved-when">'+(r.resolved_at?fl.rel(r.resolved_at):'—')+'</span>';
+}
+
+async function resolveReg(btn, id, status){
+  var row=btn.closest('span.reg-actions');
+  if(row) row.querySelectorAll('button').forEach(function(b){ b.disabled=true; });
+  try{
+    if(id.startsWith('r')){ // mock row — just re-render with updated status
+      MOCK_REPLAYS.forEach(function(r){ if(r.id===id) r.status=status; });
+      document.getElementById('view').innerHTML=render([], fl.ctx);
+      fl.toast(status==='resolved'?'Replay regression resolved':'Regression ignored');
+      return;
+    }
+    await fl.resolveRegression(id, status);
+    var regs=await fl.getRegressions(fl.ctx.orgId);
+    document.getElementById('view').innerHTML=render(regs, fl.ctx);
+    fl.toast(status==='resolved'?'Regression resolved':'Regression ignored');
+  }catch(e){
+    if(row) row.querySelectorAll('button').forEach(function(b){ b.disabled=false; });
+    fl.toast('Could not update — try again', 'warn');
+  }
+}
+</script>
+</body>
+</html>

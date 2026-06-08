@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 28'%3E%3Cpath d='M3 10H17' stroke='%232563EB' stroke-width='3.4' fill='none' stroke-linecap='round'/%3E%3Cpath d='M17 10L23 18' stroke='%232563EB' stroke-width='3.4' fill='none' stroke-linecap='round'/%3E%3Cpath d='M23 18H37' stroke='%232563EB' stroke-width='3.4' fill='none' stroke-linecap='round'/%3E%3C/svg%3E">
+<title>Runs — faultline</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="app.css">
+</head>
+<body data-page="runs">
+<div class="app"><div id="shell"></div><main class="main" id="view"></main></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="/supabase-config.js"></script>
+<script src="/app/app.js"></script>
+<script>
+var RUNS=[], FILTER='all', MODE_FILTER='all';
+
+// Mode mock data — augments DB runs with multi-mode entries for demo
+var MODE_MOCK = [
+  { id:'m-probe-1', agent_name:'chonkie-chunker', mode:'probe', silent_count:1, crash_count:0, faults_total:1, faults_handled:0,
+    assertions_passed:4, assertions_total:5, resilience:80, duration_ms:1240, git_sha:'b3c9a12', git_branch:'main', source:'ci',
+    created_at: new Date(Date.now()-2*86400000).toISOString(),
+    _finding:'chunk_overlap ≥1.0 silently drops entire document' },
+  { id:'m-probe-2', agent_name:'langchain-chain', mode:'probe', silent_count:1, crash_count:0, faults_total:1, faults_handled:0,
+    assertions_passed:3, assertions_total:4, resilience:75, duration_ms:980, git_sha:'d4e1f78', git_branch:'main', source:'ci',
+    created_at: new Date(Date.now()-3*86400000).toISOString(),
+    _finding:'unterminated code fence deletes content after it' },
+  { id:'m-fuzz-1', agent_name:'pandas-ai', mode:'fuzz', silent_count:1, crash_count:0, faults_total:1, faults_handled:0,
+    assertions_passed:6, assertions_total:7, resilience:86, duration_ms:2100, git_sha:'9f2b341', git_branch:'feat/nan-handling', source:'ci',
+    created_at: new Date(Date.now()-5*86400000).toISOString(),
+    _finding:'NaN returned as a valid number' },
+  { id:'m-fuzz-2', agent_name:'openinference-tracer', mode:'fuzz', silent_count:1, crash_count:0, faults_total:1, faults_handled:0,
+    assertions_passed:5, assertions_total:6, resilience:83, duration_ms:1670, git_sha:'c5a7e20', git_branch:'main', source:'ci',
+    created_at: new Date(Date.now()-6*86400000).toISOString(),
+    _finding:'token count written to USD cost field' },
+  { id:'m-scenarios-1', agent_name:'order-agent', mode:'scenarios', silent_count:1, crash_count:0, faults_total:1, faults_handled:0,
+    assertions_passed:11, assertions_total:12, resilience:92, duration_ms:3400, git_sha:'a1d8c95', git_branch:'main', source:'local',
+    created_at: new Date(Date.now()-1*86400000).toISOString(),
+    _finding:'shipped 3 units when only 2 in stock (glue code bug)' },
+  { id:'m-replay-1', agent_name:'refund-agent', mode:'replay', silent_count:1, crash_count:0, faults_total:1, faults_handled:0,
+    assertions_passed:7, assertions_total:8, resilience:88, duration_ms:1890, git_sha:'a3f7c12', git_branch:'main', source:'ci',
+    created_at: new Date(Date.now()-4*3600000).toISOString(),
+    _finding:'DECLINE → REFUND after model bump' },
+  { id:'m-mine-1', agent_name:'shipping-agent', mode:'mine', silent_count:1, crash_count:0, faults_total:1, faults_handled:0,
+    assertions_passed:46, assertions_total:47, resilience:98, duration_ms:4200, git_sha:'e9b3f01', git_branch:'main', source:'ci',
+    created_at: new Date(Date.now()-8*3600000).toISOString(),
+    _finding:'skipped validate_address before ship_package' },
+  { id:'m-chaos-1', agent_name:'support-agent', mode:'chaos', silent_count:0, crash_count:0, faults_total:6, faults_handled:5,
+    assertions_passed:29, assertions_total:30, resilience:97, duration_ms:5100, git_sha:'f2c4d87', git_branch:'main', source:'ci',
+    created_at: new Date(Date.now()-12*3600000).toISOString(),
+    _finding:'resilience: 5/6 chaos faults handled' }
+];
+
+fl.ready(async function(ctx){
+  var view=document.getElementById('view'), pid=fl.currentProject();
+  view.innerHTML='<div class="wrap"><div class="skel" style="height:64px"></div><div class="skel" style="height:36px"></div><div class="skel" style="height:340px"></div></div>';
+  var dbRuns=await fl.getRuns(pid,{limit:100});
+  // merge DB runs (chaos suite) with multi-mode mock runs
+  RUNS = MODE_MOCK.concat(dbRuns);
+  // apply ?mode= filter from URL
+  var urlMode = fl.qs('mode'); if(urlMode) MODE_FILTER=urlMode;
+  if(!RUNS.length){ view.innerHTML=emptyRuns(ctx); return; }
+  view.innerHTML=renderRuns(ctx);
+});
+
+function emptyRuns(ctx){
+  return '<div class="wrap"><div class="page-head"><div><div class="page-title">Runs</div>'+
+    '<div class="page-sub">'+fl.esc((ctx.project&&ctx.project.slug)||'project')+'</div></div></div>'+
+    '<div class="empty"><div class="seam"></div><h2>No runs yet</h2>'+
+    '<p>Every time you run a faultline suite, the result lands here — agent, faults injected, and whether it failed silently. Run your first check to fill this in.</p>'+
+    '<div class="code" data-c="pip install faultline\nfaultline run faultline_suite.py --push" style="text-align:left;width:min(560px,90%)"><button class="copy-btn" onclick="fl.copy(this.parentElement.dataset.c,this)">Copy</button>'+
+    '<span class="cmt"># 1 · install</span>\npip install faultline\n<span class="cmt"># 2 · run your suite + send results here</span>\nfaultline run faultline_suite.py --push</div>'+
+    '<div class="listen"><span class="status-dot"></span> Listening for your first run…</div>'+
+    '<div class="row" style="gap:10px"><a class="btn pri" href="onboarding.html">Finish setup →</a>'+
+    '<a class="btn sec" href="integrations.html">Set up CI</a></div></div></div>';
+}
+
+var MODE_COLORS={probe:'#38BDF8',fuzz:'#818CF8',scenarios:'#34D399',replay:'#F59E0B',mine:'#A78BFA',chaos:'#9aa3b2'};
+var ALL_MODES=['probe','fuzz','scenarios','replay','mine','chaos'];
+
+function modeTag(mode){
+  if(!mode) return '';
+  var styles={
+    probe:'background:rgba(56,189,248,.15);color:#38BDF8;border:1px solid rgba(56,189,248,.25)',
+    fuzz:'background:rgba(129,140,248,.15);color:#818CF8;border:1px solid rgba(129,140,248,.25)',
+    scenarios:'background:rgba(52,211,153,.12);color:#34D399;border:1px solid rgba(52,211,153,.22)',
+    replay:'background:rgba(245,158,11,.12);color:#F59E0B;border:1px solid rgba(245,158,11,.22)',
+    mine:'background:rgba(167,139,250,.12);color:#A78BFA;border:1px solid rgba(167,139,250,.22)',
+    chaos:'background:rgba(107,114,128,.12);color:#9aa3b2;border:1px solid rgba(107,114,128,.25)'
+  };
+  var s=styles[mode]||'background:rgba(255,255,255,.04);color:var(--muted);border:1px solid rgba(255,255,255,.08)';
+  return '<span style="display:inline-flex;align-items:center;font-family:var(--mono);font-size:10.5px;padding:2px 8px;border-radius:5px;'+s+';white-space:nowrap">'+fl.esc(mode)+'</span>';
+}
+
+function counts(){
+  var base=MODE_FILTER==='all'?RUNS:RUNS.filter(function(r){return (r.mode||'chaos')===MODE_FILTER;});
+  var c={all:base.length,fail:0,crash:0,pass:0};
+  base.forEach(function(r){ var v=fl.runVerdict(r); if(v==='fail') c.fail++; else if(v==='crash') c.crash++; else if(v==='pass') c.pass++; });
+  return c;
+}
+
+function filtered(){
+  var base=MODE_FILTER==='all'?RUNS:RUNS.filter(function(r){return (r.mode||'chaos')===MODE_FILTER;});
+  if(FILTER==='all') return base;
+  return base.filter(function(r){ return fl.runVerdict(r)===FILTER; });
+}
+
+function renderRuns(ctx){
+  var c=counts();
+  var total=RUNS.length;
+  var h='<div class="wrap">';
+  h+='<div class="page-head"><div><div class="page-title">Runs</div>'+
+     '<div class="page-sub">'+fl.esc((ctx.project&&((ctx.project.org_slug?ctx.project.org_slug+' / ':'')+ctx.project.slug))||'project')+' · '+total+' run'+(total===1?'':'s')+' across all modes</div></div></div>';
+
+  // mode filter tabs
+  h+='<div class="pill-tabs" style="flex-wrap:wrap;gap:4px">'+
+     modePill('all','All modes',RUNS.length);
+  ALL_MODES.forEach(function(m){
+    var n=RUNS.filter(function(r){return (r.mode||'chaos')===m;}).length;
+    h+=modePill(m,m,n);
+  });
+  h+='</div>';
+
+  // verdict filter bar
+  h+='<div class="pill-tabs" style="margin-top:6px">'+
+     pill('all','All',c.all)+
+     pill('fail','Defect / Silent',c.fail)+
+     pill('crash','Crash',c.crash)+
+     pill('pass','Pass',c.pass)+
+     '</div>';
+
+  // table card
+  h+='<div class="card glow hairline"><div id="runsBody">'+tableBody()+'</div></div>';
+  h+='</div>';
+  return h;
+}
+
+function modePill(key,label,n){
+  var active=MODE_FILTER===key;
+  var color=MODE_COLORS[key];
+  var style=active&&color?'background:'+color.replace('#','rgba(').replace(/^rgba\(([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i,function(m,r,g,b){return 'rgba('+parseInt(r,16)+','+parseInt(g,16)+','+parseInt(b,16);})+',0.15);border-color:'+color+';color:'+color:'';
+  return '<span class="pill-tab'+(active?' active':'')+'" style="'+style+'" onclick="setModeFilter(\''+key+'\')">'+
+    fl.esc(label)+' <span class="mono" style="opacity:.65">'+n+'</span></span>';
+}
+
+function pill(key,label,n){
+  return '<span class="pill-tab'+(FILTER===key?' active':'')+'" onclick="setFilter(\''+key+'\')">'+
+    fl.esc(label)+' <span class="mono" style="opacity:.7">'+n+'</span></span>';
+}
+
+function setModeFilter(key){
+  MODE_FILTER=key; FILTER='all';
+  reRender();
+}
+
+function setFilter(key){
+  FILTER=key;
+  reRender();
+}
+
+function reRender(){
+  var view=document.getElementById('view');
+  var modeBar=view.querySelectorAll('.pill-tabs')[0];
+  var verdBar=view.querySelectorAll('.pill-tabs')[1];
+  var c=counts(), total=RUNS.length;
+  if(modeBar){
+    var mp=modePill('all','All modes',total);
+    ALL_MODES.forEach(function(m){ var n=RUNS.filter(function(r){return (r.mode||'chaos')===m;}).length; mp+=modePill(m,m,n); });
+    modeBar.innerHTML=mp;
+  }
+  if(verdBar) verdBar.innerHTML=pill('all','All',c.all)+pill('fail','Defect / Silent',c.fail)+pill('crash','Crash',c.crash)+pill('pass','Pass',c.pass);
+  var body=document.getElementById('runsBody');
+  if(body) body.innerHTML=tableBody();
+}
+
+function tableBody(){
+  var rows=filtered();
+  if(!rows.length){
+    return '<div class="empty" style="box-shadow:none;border:none;padding:46px 32px"><div class="seam"></div>'+
+      '<h2>No matching runs</h2>'+
+      '<p>Nothing matches this filter yet. Switch back to All to see the full history, or run another suite.</p>'+
+      '<a class="btn sec" onclick="setModeFilter(\'all\');setFilter(\'all\')" style="cursor:pointer">Show all runs</a></div>';
+  }
+  var h='<table><thead><tr>'+
+    '<th>Mode</th><th>Verdict</th><th>Agent</th><th>Finding / Result</th><th>Assertions</th><th>Trigger</th><th>When</th>'+
+    '</tr></thead><tbody>';
+  rows.forEach(function(r){
+    var v=fl.runVerdict(r);
+    var mode=r.mode||'chaos';
+    var handled=(r.faults_handled!=null?r.faults_handled:0)+'/'+(r.faults_total!=null?r.faults_total:0);
+    var finding=r._finding||((r.silent_count>0)?'silent failure detected':(r.crash_count>0)?'crash':'all checks passed');
+    var trigger;
+    if(r.source==='ci'){
+      var sha=r.git_sha?r.git_sha.slice(0,6):'';
+      trigger='<span class="mono muted">'+fl.esc((r.git_branch||'')+(sha?' '+sha:''))+'</span>';
+    } else {
+      trigger='<span class="mono muted">local</span>';
+    }
+    var rowId=String(r.id||'');
+    var href=rowId.startsWith('m-')?'#':'run.html?run='+encodeURIComponent(rowId);
+    h+='<tr onclick="location.href=\''+href+'\'">'+
+      '<td>'+modeTag(mode)+'</td>'+
+      '<td><span class="verdict '+v+'">'+(v==='fail'?'DEFECT':fl.verdictLabel(v))+'</span></td>'+
+      '<td><div class="cell-agent">'+
+        '<div class="agent-ic '+fl.agentColor(r.agent_name)+'">'+fl.esc((r.agent_name||'?')[0].toUpperCase())+'</div>'+
+        '<div><div class="agent-nm">'+fl.esc(r.agent_name||'agent')+'</div>'+
+        '<div class="agent-rid">#'+fl.esc((r.git_sha||r.id||'').slice(0,6))+'</div></div></div></td>'+
+      '<td style="font-size:12px;color:var(--text2);max-width:240px">'+fl.esc(finding)+'</td>'+
+      '<td class="mono muted">'+(r.assertions_passed||0)+' / '+(r.assertions_total||0)+'</td>'+
+      '<td>'+trigger+'</td>'+
+      '<td class="when">'+fl.rel(r.created_at)+'</td></tr>';
+  });
+  h+='</tbody></table>';
+  return h;
+}
+
+function filterNoun(){ return FILTER==='fail'?'defect':FILTER==='crash'?'crash':FILTER==='pass'?'pass':''; }
+</script>
+</body>
+</html>

@@ -1,0 +1,260 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 28'%3E%3Cpath d='M3 10H17' stroke='%232563EB' stroke-width='3.4' fill='none' stroke-linecap='round'/%3E%3Cpath d='M17 10L23 18' stroke='%232563EB' stroke-width='3.4' fill='none' stroke-linecap='round'/%3E%3Cpath d='M23 18H37' stroke='%232563EB' stroke-width='3.4' fill='none' stroke-linecap='round'/%3E%3C/svg%3E">
+<title>Settings — faultline</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="app.css">
+</head>
+<body data-page="settings">
+<div class="app"><div id="shell"></div><main class="main" id="view"></main></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="/supabase-config.js"></script>
+<script src="/app/app.js"></script>
+<script>
+var FL_CTX, CUR_TAB = (fl.qs('tab') || 'project');
+
+fl.ready(async function(ctx){
+  FL_CTX = ctx;
+  var view = document.getElementById('view');
+  view.innerHTML =
+    '<div class="wrap">'+
+      '<div class="page-head"><div>'+
+        '<div class="page-title">Settings</div>'+
+        '<div class="page-sub">'+fl.esc((ctx.project&&((ctx.project.org_slug?ctx.project.org_slug+' / ':'')+ctx.project.slug))||'project')+'</div>'+
+      '</div></div>'+
+      tabsBar(CUR_TAB)+
+      '<div id="panel"><div class="skel" style="height:220px"></div></div>'+
+    '</div>';
+  selectTab(CUR_TAB);
+});
+
+function tabsBar(active){
+  var defs = [['project','Project'],['tokens','Tokens'],['team','Team'],['account','Account']];
+  return '<div class="tabs" id="settingsTabs">'+defs.map(function(d){
+    return '<div class="tab'+(d[0]===active?' active':'')+'" onclick="selectTab(\''+d[0]+'\')">'+d[1]+'</div>';
+  }).join('')+'</div>';
+}
+
+function selectTab(tab){
+  CUR_TAB = tab;
+  document.querySelectorAll('#settingsTabs .tab').forEach(function(t,i){
+    var keys=['project','tokens','team','account'];
+    t.classList.toggle('active', keys[i]===tab);
+  });
+  try{ history.replaceState(null,'','?tab='+tab); }catch(e){}
+  var panel = document.getElementById('panel');
+  if(tab==='project'){ panel.innerHTML = renderProject(FL_CTX); }
+  else if(tab==='team'){ panel.innerHTML = renderTeam(FL_CTX); }
+  else if(tab==='account'){ panel.innerHTML = renderAccount(FL_CTX); }
+  else if(tab==='tokens'){ panel.innerHTML = '<div class="skel" style="height:220px"></div>'; loadTokens(); }
+}
+
+/* ── PROJECT ───────────────────────────────────────────────────────── */
+function renderProject(ctx){
+  var p = ctx.project || {};
+  var thr = (p.alert_threshold!=null) ? p.alert_threshold : 80;
+  var h = '<div class="card glow hairline">'+
+    '<div class="card-head"><div><div class="card-title">Project</div>'+
+      '<div class="card-meta">Name and alerting for this project</div></div></div>'+
+    '<div class="card-pad" style="display:flex;flex-direction:column;gap:18px">'+
+      '<div class="field"><label for="projNameInput">Project name</label>'+
+        '<input type="text" id="projNameInput" value="'+fl.esc(p.name||'')+'" placeholder="My agent project">'+
+        '<span class="hint">Shown across the dashboard and in CI output.</span></div>'+
+      '<div class="field" style="max-width:240px"><label for="alertThr">Alert when resilience drops below</label>'+
+        '<input type="text" inputmode="numeric" id="alertThr" class="mono" value="'+fl.esc(thr)+'" placeholder="80">'+
+        '<span class="hint">We notify the team when a run scores under this percent.</span></div>'+
+      '<div class="row" style="gap:10px"><button class="btn pri" onclick="saveProject()">Save changes</button>'+
+        '<a class="btn ghost" href="integrations.html">CI &amp; tokens →</a></div>'+
+    '</div></div>'+
+    '<div class="card hairline" style="margin-top:16px;border-color:rgba(239,68,68,.2)">'+
+      '<div class="card-head" style="border-bottom-color:rgba(239,68,68,.15)"><div>'+
+        '<div class="card-title">Delete project</div>'+
+        '<div class="card-meta">Permanently removes this project, its runs, agents, and tokens. This can\'t be undone.</div></div></div>'+
+      '<div class="card-pad"><button class="btn danger" onclick="deleteProject()">Delete '+fl.esc(p.slug||'project')+'</button></div>'+
+    '</div>';
+  return h;
+}
+async function saveProject(){
+  var name = (document.getElementById('projNameInput')||{}).value || '';
+  var thrRaw = (document.getElementById('alertThr')||{}).value || '';
+  if(!name.trim()){ fl.toast('Project name can\'t be empty','warn'); return; }
+  var thr = parseInt(thrRaw,10); if(isNaN(thr)||thr<0||thr>100) thr = 80;
+  var pid = fl.currentProject();
+  try{
+    var r = await fl.sb.from('projects').update({name:name.trim(), alert_threshold:thr}).eq('id',pid);
+    if(r.error) throw r.error;
+    if(FL_CTX.project){ FL_CTX.project.name = name.trim(); FL_CTX.project.alert_threshold = thr; }
+    fl.toast('Saved');
+  }catch(e){ fl.toast((e&&e.message)||'Could not save changes','warn'); }
+}
+async function deleteProject(){
+  var slug = (FL_CTX.project && FL_CTX.project.slug) || 'this project';
+  if(!confirm('Delete '+slug+'? This permanently removes its runs, agents, and tokens. This can\'t be undone.')) return;
+  var pid = fl.currentProject();
+  var btn = document.querySelector('.btn.danger');
+  if(btn){ btn.disabled = true; btn.textContent = 'Deleting…'; }
+  try{
+    // Remove child rows first (in case the schema has no ON DELETE CASCADE), then the project.
+    // (fault_results has no project_id — it cascades from runs via run_id, so deleting runs covers it.)
+    var children = ['runs','agents','regressions','project_tokens'];
+    for(var i=0;i<children.length;i++){
+      try{ await fl.sb.from(children[i]).delete().eq('project_id', pid); }catch(e){}
+    }
+    var r = await fl.sb.from('projects').delete().eq('id', pid);
+    if(r.error) throw r.error;
+    localStorage.removeItem('fl_project');
+    fl.toast('Project deleted');
+    setTimeout(function(){ location.href = 'overview.html'; }, 650);
+  }catch(e){
+    if(btn){ btn.disabled = false; btn.textContent = 'Delete '+slug; }
+    fl.toast((e&&e.message)||'Could not delete project — you may not have permission','warn');
+  }
+}
+
+/* ── TOKENS ────────────────────────────────────────────────────────── */
+async function loadTokens(){
+  var pid = fl.currentProject();
+  var panel = document.getElementById('panel');
+  var toks = [];
+  try{ toks = await fl.getTokens(pid); }catch(e){ toks = []; }
+  if(CUR_TAB!=='tokens') return; // user switched away while loading
+  panel.innerHTML = renderTokens(toks);
+}
+function renderTokens(toks){
+  var h = '<div class="card glow hairline">'+
+    '<div class="card-head"><div><div class="card-title">API tokens</div>'+
+      '<div class="card-meta">Used by the CLI and CI to push run results · '+toks.length+' token'+(toks.length===1?'':'s')+'</div></div>'+
+      '<button class="btn pri sm" onclick="createToken()">Create token</button></div>';
+
+  if(!toks.length){
+    h += '<div class="empty" style="box-shadow:none;border:none">'+
+      '<div class="seam"></div><h2>No tokens yet</h2>'+
+      '<p>Mint a token to authenticate <span class="mono">faultline run --push</span> from your machine or CI pipeline.</p>'+
+      '<button class="btn pri" onclick="createToken()">Create your first token</button></div>';
+  } else {
+    h += '<table><thead><tr><th>Name</th><th>Prefix</th><th>Created</th><th>Last used</th><th>Revoke</th></tr></thead><tbody>';
+    toks.forEach(function(t){
+      var revoked = !!t.revoked_at;
+      h += '<tr style="cursor:default">'+
+        '<td><span class="agent-nm">'+fl.esc(t.name||'token')+'</span>'+(revoked?' <span class="fault-tag" style="margin-left:6px">revoked</span>':'')+'</td>'+
+        '<td class="mono muted">'+fl.esc(t.token_prefix||'—')+'</td>'+
+        '<td class="when">'+fl.rel(t.created_at)+'</td>'+
+        '<td class="when">'+(t.last_used_at?fl.rel(t.last_used_at):'never')+'</td>'+
+        '<td>'+(revoked
+          ? '<span class="muted" style="font-size:12px">—</span>'
+          : '<button class="btn sm danger" onclick="revokeTok(\''+t.id+'\')">Revoke</button>')+'</td>'+
+        '</tr>';
+    });
+    h += '</tbody></table>';
+  }
+  h += '</div>';
+
+  // security note
+  h += '<div class="banner info" style="margin-top:16px">'+
+    '<svg width="15" height="15" viewBox="0 0 15 15" fill="none"><path d="M7.5 1.5l5 2v3.5c0 3.2-2.1 5.4-5 6.5-2.9-1.1-5-3.3-5-6.5V3.5z" stroke="currentColor" stroke-width="1.1" stroke-linejoin="round"/><path d="M5.4 7.6l1.4 1.4 2.8-3" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/></svg>'+
+    '<span>Tokens grant push access to this project. The full value is shown only once at creation — store it in a secret manager, never commit it. Revoke immediately if leaked.</span></div>';
+  return h;
+}
+async function revokeTok(id){
+  try{ await fl.revokeToken(id); fl.toast('Token revoked'); }
+  catch(e){ fl.toast('Could not revoke token','warn'); }
+  loadTokens();
+}
+function askTokenName(onName){
+  var ov=document.createElement('div'); ov.className='ov show';
+  ov.innerHTML='<div class="modal" style="position:relative;max-width:440px">'+
+    '<button class="x" onclick="this.closest(\'.ov\').remove()">&times;</button><h3>Name your token</h3>'+
+    '<p class="muted" style="margin-bottom:14px">A label so you can recognise it later — e.g. "GitHub Actions" or "local dev".</p>'+
+    '<input id="tokNameInput" maxlength="40" placeholder="CI token" value="CI token" autocomplete="off" spellcheck="false" '+
+      'style="width:100%;background:rgba(255,255,255,.04);border:1px solid var(--border2);border-radius:9px;padding:11px 13px;color:var(--text);font-family:inherit;font-size:14px;outline:none">'+
+    '<div class="row" style="margin-top:16px;justify-content:flex-end;gap:10px">'+
+      '<button class="btn sec" onclick="this.closest(\'.ov\').remove()">Cancel</button>'+
+      '<button class="btn pri" id="tokNameGo">Create token</button></div></div>';
+  ov.addEventListener('click',function(e){ if(e.target===ov) ov.remove(); });
+  document.body.appendChild(ov);
+  var inp=ov.querySelector('#tokNameInput'); setTimeout(function(){inp.focus();inp.select();},30);
+  function go(){ var name=(inp.value||'').trim()||'CI token'; ov.remove(); onName(name); }
+  ov.querySelector('#tokNameGo').addEventListener('click',go);
+  inp.addEventListener('keydown',function(e){ if(e.key==='Enter'){e.preventDefault();go();} });
+}
+function createToken(){
+  var pid = fl.currentProject();
+  askTokenName(async function(name){
+    var full;
+    try{ full = await fl.mintToken(pid, name); }
+    catch(e){ fl.toast('Could not create token','warn'); return; }
+    if(!full){ fl.toast('Could not create token','warn'); return; }
+    showTokenModal(name, full);
+    loadTokens();
+  });
+}
+function showTokenModal(name, full){
+  var ov = document.createElement('div');
+  ov.className = 'ov show';
+  ov.innerHTML =
+    '<div class="modal" style="position:relative;max-width:520px">'+
+      '<button class="x" onclick="this.closest(\'.ov\').remove()">&times;</button>'+
+      '<h3>Token created</h3>'+
+      '<p class="muted" style="margin-bottom:16px">Copy <b style="color:var(--text)">'+fl.esc(name)+'</b> now — you won\'t be able to see it again.</p>'+
+      '<div class="code" data-c="'+fl.esc(full)+'">'+
+        '<button class="copy-btn" onclick="fl.copy(this.parentElement.dataset.c,this)">Copy</button>'+
+        fl.esc(full)+'</div>'+
+      '<div class="banner warn" style="margin-top:16px">'+
+        '<span>Store this now in your secret manager or CI variables. faultline keeps only a hashed prefix — this is the last time the full token is shown.</span></div>'+
+      '<div class="row" style="margin-top:18px;justify-content:flex-end"><button class="btn sec" onclick="this.closest(\'.ov\').remove()">Done</button></div>'+
+    '</div>';
+  ov.addEventListener('click', function(e){ if(e.target===ov) ov.remove(); });
+  document.body.appendChild(ov);
+}
+
+/* ── TEAM ──────────────────────────────────────────────────────────── */
+function renderTeam(ctx){
+  var email = (ctx.user && ctx.user.email) || '';
+  var h = '<div class="card glow hairline">'+
+    '<div class="card-head"><div><div class="card-title">Team</div>'+
+      '<div class="card-meta">People with access to this workspace</div></div></div>'+
+    '<table><thead><tr><th>Member</th><th>Role</th><th></th></tr></thead><tbody>'+
+      '<tr style="cursor:default"><td><div class="cell-agent">'+
+        '<div class="agent-ic '+fl.agentColor(email||'owner')+'">'+(email?email[0].toUpperCase():'?')+'</div>'+
+        '<div><div class="agent-nm">'+fl.esc(email||'you')+'</div><div class="agent-rid">you</div></div></div></td>'+
+        '<td><span class="fault-tag">Owner</span></td>'+
+        '<td><span class="muted" style="font-size:12px">—</span></td></tr>'+
+    '</tbody></table></div>';
+
+  h += '<div class="card hairline" style="margin-top:16px">'+
+    '<div class="card-head"><div><div class="card-title">Invite a teammate</div>'+
+      '<div class="card-meta">They\'ll get access to this project\'s runs and faults</div></div></div>'+
+    '<div class="card-pad"><div class="row" style="gap:10px;align-items:flex-end">'+
+      '<div class="field" style="flex:1;max-width:340px"><label for="inviteEmail">Email</label>'+
+        '<input type="email" id="inviteEmail" placeholder="teammate@company.com"></div>'+
+      '<button class="btn sec" onclick="inviteMember()">Send invite</button></div></div></div>';
+  return h;
+}
+function inviteMember(){
+  var el = document.getElementById('inviteEmail');
+  var v = (el && el.value || '').trim();
+  if(!v || v.indexOf('@')<0){ fl.toast('Enter a valid email','warn'); return; }
+  fl.toast('Team invites aren\'t enabled in this build yet — coming soon','warn');
+}
+
+/* ── ACCOUNT ───────────────────────────────────────────────────────── */
+function renderAccount(ctx){
+  var email = (ctx.user && ctx.user.email) || '';
+  return '<div class="card glow hairline">'+
+    '<div class="card-head"><div><div class="card-title">Account</div>'+
+      '<div class="card-meta">Your faultline login</div></div></div>'+
+    '<div class="card-pad" style="display:flex;flex-direction:column;gap:18px">'+
+      '<div class="field" style="max-width:340px"><label>Email</label>'+
+        '<input type="email" value="'+fl.esc(email)+'" disabled></div>'+
+      '<div class="spread" style="padding-top:6px;border-top:1px solid var(--border)">'+
+        '<div><div class="agent-nm">Sign out</div><div class="card-meta">End your session on this device.</div></div>'+
+        '<button class="btn sec" onclick="fl.signOut()">Sign out</button></div>'+
+    '</div></div>';
+}
+</script>
+</body>
+</html>
