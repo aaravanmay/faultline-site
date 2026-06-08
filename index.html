@@ -340,7 +340,7 @@
   <nav id="nav"><div class="bar">
     <a class="brand" href="#"><svg width="27" height="19" viewBox="0 0 40 28" fill="none"><path d="M3 10H17" stroke="#0B0D14" stroke-width="3.2" stroke-linecap="round"/><path d="M17 10L23 18" stroke="#2563EB" stroke-width="3.2" stroke-linecap="round"/><path d="M23 18H37" stroke="#0B0D14" stroke-width="3.2" stroke-linecap="round"/></svg> faultline</a>
     <div class="nlinks">
-      <a href="#how">How it works</a><a href="#product">Product</a><a href="#why">Why faultline</a><a href="#pricing">Pricing</a><a href="#how">Docs</a>
+      <a href="#how">How it works</a><a href="#product">Product</a><a href="#why">Why faultline</a><a href="#how">Docs</a>
     </div>
     <div class="nav-r">
       <a class="login" data-auth="signin" href="#">Sign in</a>
@@ -674,6 +674,16 @@ fl.scenarios(
       <p style="text-align:center;font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:14px;letter-spacing:.04em">real install, real run — no edits, no tricks</p>
     </div>
     <div class="reveal" style="margin-top:26px"><span class="install-pill">pip install faultline</span></div>
+    <div class="reveal" style="margin-top:34px;display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:16px;max-width:780px;margin-left:auto;margin-right:auto;text-align:left">
+      <div style="background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:19px 21px;box-shadow:var(--sh-sm)">
+        <div style="font-weight:600;font-size:15px;margin-bottom:6px">Don't want to write rules?</div>
+        <p style="font-size:13.5px;color:var(--ink2);line-height:1.55">faultline auto-wraps your agent's tools — no manual setup — and <span class="mono" style="color:var(--blue)">mine</span> mode learns the rules from your good runs automatically.</p>
+      </div>
+      <div style="background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:19px 21px;box-shadow:var(--sh-sm)">
+        <div style="font-weight:600;font-size:15px;margin-bottom:6px">Want AI-suggested fixes?</div>
+        <p style="font-size:13.5px;color:var(--ink2);line-height:1.55">Connect your own <strong>Anthropic API key</strong> to test live LLM agents and get concrete fix suggestions. Your key, your usage — never sent to us.</p>
+      </div>
+    </div>
   </div></section>
 
   <!-- WHY -->
@@ -693,25 +703,15 @@ fl.scenarios(
     </div>
   </div></section>
 
-  <!-- PRICING -->
-  <section id="pricing" class="center"><div class="wrap">
-    <div class="sechead"><span class="eyebrow reveal">Pricing</span><h2 class="reveal" style="margin-top:14px">Start free. Scale when you do.</h2></div>
-    <div class="prices" style="text-align:left">
-      <div class="price reveal">
-        <h3>Open source</h3><div class="amt">$0</div><div class="pdesc">The engine, forever.</div>
-        <ul><li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6 9 17l-5-5" stroke-linecap="round" stroke-linejoin="round"/></svg> Full fault library + CLI</li><li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6 9 17l-5-5" stroke-linecap="round" stroke-linejoin="round"/></svg> GitHub Action</li><li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6 9 17l-5-5" stroke-linecap="round" stroke-linejoin="round"/></svg> Runs in your CI</li></ul>
-        <a class="btn sec mag" data-auth="signup" href="#">Get started</a>
-      </div>
-      <div class="price feat reveal">
-        <span class="tag">Most popular</span>
-        <h3>Team</h3><div class="amt">Free<small> in beta</small></div><div class="pdesc">The hosted dashboard + history.</div>
-        <ul><li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6 9 17l-5-5" stroke-linecap="round" stroke-linejoin="round"/></svg> Everything in open source</li><li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6 9 17l-5-5" stroke-linecap="round" stroke-linejoin="round"/></svg> Resilience dashboard + trends</li><li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6 9 17l-5-5" stroke-linecap="round" stroke-linejoin="round"/></svg> Regression alerts</li><li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6 9 17l-5-5" stroke-linecap="round" stroke-linejoin="round"/></svg> Shared fault suites</li></ul>
-        <a class="btn pri mag" data-auth="signup" href="#">Start free trial</a>
-      </div>
-      <div class="price reveal">
-        <h3>Enterprise</h3><div class="amt">Let's talk</div><div class="pdesc">For high-stakes agents.</div>
-        <ul><li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6 9 17l-5-5" stroke-linecap="round" stroke-linejoin="round"/></svg> SSO + audit logs</li><li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6 9 17l-5-5" stroke-linecap="round" stroke-linejoin="round"/></svg> Self-hosted option</li><li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6 9 17l-5-5" stroke-linecap="round" stroke-linejoin="round"/></svg> Priority support</li></ul>
-        <a class="btn sec mag" href="#">Contact us</a>
+  <!-- OPEN SOURCE -->
+  <section id="opensource" class="center"><div class="wrap">
+    <div class="sechead reveal" style="margin:0 auto">
+      <span class="eyebrow">Open source</span>
+      <h2 style="margin-top:14px">Free. MIT-licensed.<br>Yours forever.</h2>
+      <p class="sub" style="margin-top:18px;max-width:48ch">The whole engine — every testing mode, the CLI, the GitHub Action — is free and open source. It runs in your own CI and never sees your data.</p>
+      <div style="margin-top:26px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
+        <a class="btn pri mag" href="https://github.com/aaravanmay/faultline" target="_blank" rel="noopener">View on GitHub →</a>
+        <span class="install-pill">pip install faultline</span>
       </div>
     </div>
   </div></section>
@@ -743,7 +743,7 @@ fl.scenarios(
         <span>Silent-failure testing for AI agents.</span>
         <span style="opacity:.7;font-size:13.5px">Built on flightlog's interception engine — the hard part is already shipped.</span>
       </div>
-      <div class="fcol"><span class="ft">Product</span><a href="#how">How it works</a><a href="#product">Dashboard</a><a href="#pricing">Pricing</a></div>
+      <div class="fcol"><span class="ft">Product</span><a href="#how">How it works</a><a href="#product">Dashboard</a></div>
       <div class="fcol"><span class="ft">Developers</span><a href="#">Docs</a><a href="#">GitHub</a><a href="#">Changelog</a></div>
       <div class="fcol"><span class="ft">Company</span><a href="#">About</a><a href="#">Privacy</a><a href="#">Terms</a></div>
     </div>
@@ -751,7 +751,7 @@ fl.scenarios(
   </div></footer>
 
   <div class="mobilemenu" id="mobilemenu" style="position:fixed;inset:0;z-index:51;background:rgba(251,251,253,.98);backdrop-filter:blur(16px);display:none;flex-direction:column;align-items:center;justify-content:center;gap:24px">
-    <a href="#how">How it works</a><a href="#product">Product</a><a href="#why">Why faultline</a><a href="#pricing">Pricing</a><a class="btn pri" data-auth="signup" href="#">Start free</a>
+    <a href="#how">How it works</a><a href="#product">Product</a><a href="#why">Why faultline</a><a class="btn pri" data-auth="signup" href="#">Start free</a>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/lenis@1.1/dist/lenis.min.js"></script>
