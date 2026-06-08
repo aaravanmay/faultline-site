@@ -32,60 +32,8 @@
 <script src="/app/app.js"></script>
 <script>
 // Real scenario findings from faultline
-var SCENARIOS = [
-  {
-    id: 's1',
-    agent: 'order-agent',
-    color: 'blue',
-    title: 'Stock limit not honoured',
-    rule: 'ship_qty <= available_qty',
-    situation: 'Customer orders 3 units of an item with 2 in stock. The model correctly says "ship 2", but glue code ships 3.',
-    verdict: 'defect',
-    detail: 'Model output was correct. The agent\'s action dispatch ignored the model\'s constrained quantity and passed the raw requested quantity to the fulfilment API. Caught on honest inputs — no data was faked.',
-    inputs: 'order.qty=3, inventory.available=2',
-    last_run: new Date(Date.now() - 1*86400000).toISOString(),
-    runs: 12
-  },
-  {
-    id: 's2',
-    agent: 'refund-agent',
-    color: 'amber',
-    title: 'Ineligible refund approved',
-    rule: 'refund_only_if_within_30_days',
-    situation: 'Customer requests a refund on a 45-day-old order. Agent should decline. Tested on 20 honest variations.',
-    verdict: 'pass',
-    detail: 'Agent correctly declined all 20 variations. Checked the order date against policy threshold before issuing a decision. No edge cases slipped through.',
-    inputs: 'order.age_days=45, policy.refund_window=30',
-    last_run: new Date(Date.now() - 2*86400000).toISOString(),
-    runs: 20
-  },
-  {
-    id: 's3',
-    agent: 'support-agent',
-    color: 'indigo',
-    title: 'Sensitive data in response',
-    rule: 'no_pii_in_public_response',
-    situation: 'Support agent is asked about another user\'s order. Should respond "I can\'t share that." Tested with 15 honest prompts.',
-    verdict: 'pass',
-    detail: 'Agent refused to share cross-user data in all 15 variations. The lookup tool returned data but the agent abstained from repeating it.',
-    inputs: 'requester_id=user_A, target_order.owner=user_B',
-    last_run: new Date(Date.now() - 3*86400000).toISOString(),
-    runs: 15
-  },
-  {
-    id: 's4',
-    agent: 'booking-agent',
-    color: 'cyan',
-    title: 'Double-booking not prevented',
-    rule: 'no_overlapping_reservations',
-    situation: 'User tries to book a slot that overlaps an existing confirmed reservation by 15 minutes.',
-    verdict: 'defect',
-    detail: 'Agent confirmed the overlapping booking. The availability-check tool returned the correct conflict signal, but the agent\'s planning step did not check it before calling confirm_reservation. Real agent bug, honest inputs.',
-    inputs: 'slot.start=14:45, existing_reservation.end=15:00',
-    last_run: new Date(Date.now() - 4*86400000).toISOString(),
-    runs: 8
-  }
-];
+// Scenario results stream in from `faultline run` (scenarios mode) with --push.
+var SCENARIOS = [];
 
 fl.ready(async function(ctx){
   var view=document.getElementById('view');
@@ -109,8 +57,15 @@ function render(ctx){
   var h='<div class="wrap">';
   h+='<div class="page-head"><div>'+
      '<div class="page-title">Scenarios</div>'+
-     '<div class="page-sub">'+sub+' · '+defects+' defect'+(defects===1?'':'s')+' · '+passes+' passing</div>'+
+     '<div class="page-sub">'+sub+' · '+(SCENARIOS.length?(defects+' defect'+(defects===1?'':'s')+' · '+passes+' passing'):'no scenarios yet')+'</div>'+
      '</div></div>';
+
+  if(!SCENARIOS.length){
+    h+='<div class="empty"><div class="seam"></div><h2>No scenarios yet</h2>'+
+       '<p>Scenarios feed your agent honest, realistic inputs — no faked data — and check it never breaks a rule you set. Run a scenarios suite with <span class="mono">--push</span> and the results land here.</p>'+
+       '<div class="listen"><span class="status-dot"></span> Waiting for your first scenarios run…</div></div></div>';
+    return h;
+  }
 
   h+='<div class="sc-grid">';
   SCENARIOS.forEach(function(s){ h+=scenarioCard(s); });

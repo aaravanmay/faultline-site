@@ -33,54 +33,8 @@
 <script src="/app/app.js"></script>
 <script>
 // Real mined rule from faultline + plausible adjacent ones
-var MINED_RULES = [
-  {
-    id: 'm1',
-    name: 'validate_address_before_ship',
-    agent: 'shipping-agent',
-    color: 'blue',
-    observed: 'validate_address is always called before ship_package in 47 of 47 good runs',
-    enforced: true,
-    learned_from: 47,
-    violations: [
-      { run: 'run-2024-06-05-3a7f', detail: 'ship_package called directly — validate_address was skipped', when: new Date(Date.now()-8*3600000).toISOString() }
-    ],
-    last_violation: new Date(Date.now()-8*3600000).toISOString()
-  },
-  {
-    id: 'm2',
-    name: 'confirm_before_irreversible_action',
-    agent: 'order-agent',
-    color: 'indigo',
-    observed: 'confirm_order is always preceded by get_inventory_check in 38 of 38 good runs',
-    enforced: true,
-    learned_from: 38,
-    violations: [],
-    last_violation: null
-  },
-  {
-    id: 'm3',
-    name: 'no_tool_result_used_without_null_check',
-    agent: 'refund-agent',
-    color: 'cyan',
-    observed: 'every tool result is null-checked before its value is passed downstream in 29 of 31 good runs (2 exceptions under investigation)',
-    enforced: false,
-    learned_from: 31,
-    violations: [],
-    last_violation: null
-  },
-  {
-    id: 'm4',
-    name: 'escalate_on_policy_ambiguity',
-    agent: 'support-agent',
-    color: 'amber',
-    observed: 'agent calls escalate_to_human when confidence < 0.6 in 22 of 22 good runs',
-    enforced: true,
-    learned_from: 22,
-    violations: [],
-    last_violation: null
-  }
-];
+// Mined invariants stream in from `faultline mine` runs with --push.
+var MINED_RULES = [];
 
 fl.ready(async function(ctx){
   var view=document.getElementById('view');
@@ -102,8 +56,15 @@ function render(ctx){
   h+='<div class="page-head"><div>'+
      '<div class="page-title">Mined Rules</div>'+
      '<div class="page-sub">'+sub+' · '+
-     enforced+' enforced · '+(withViolations?('<span style="color:var(--silent)">'+withViolations+' with violations</span>'):'no violations')+'</div>'+
+     (MINED_RULES.length?(enforced+' enforced · '+(withViolations?('<span style="color:var(--silent)">'+withViolations+' with violations</span>'):'no violations')):'no rules yet')+'</div>'+
      '</div></div>';
+
+  if(!MINED_RULES.length){
+    h+='<div class="empty"><div class="seam"></div><h2>No mined rules yet</h2>'+
+       '<p>Point faultline at a batch of good runs and it learns the invariants your agent always holds — "validate before ship", "null-check before use" — then enforces them deterministically. Run <span class="mono">faultline mine</span> with <span class="mono">--push</span> to fill this in.</p>'+
+       '<div class="listen"><span class="status-dot"></span> Waiting for mined invariants…</div></div></div>';
+    return h;
+  }
 
   // rules
   h+='<div class="card glow hairline"><div class="card-head"><div>'+

@@ -17,48 +17,11 @@
 <script>
 var RUNS=[], FILTER='all', MODE_FILTER='all';
 
-// Mode mock data — augments DB runs with multi-mode entries for demo
-var MODE_MOCK = [
-  { id:'m-probe-1', agent_name:'chonkie-chunker', mode:'probe', silent_count:1, crash_count:0, faults_total:1, faults_handled:0,
-    assertions_passed:4, assertions_total:5, resilience:80, duration_ms:1240, git_sha:'b3c9a12', git_branch:'main', source:'ci',
-    created_at: new Date(Date.now()-2*86400000).toISOString(),
-    _finding:'chunk_overlap ≥1.0 silently drops entire document' },
-  { id:'m-probe-2', agent_name:'langchain-chain', mode:'probe', silent_count:1, crash_count:0, faults_total:1, faults_handled:0,
-    assertions_passed:3, assertions_total:4, resilience:75, duration_ms:980, git_sha:'d4e1f78', git_branch:'main', source:'ci',
-    created_at: new Date(Date.now()-3*86400000).toISOString(),
-    _finding:'unterminated code fence deletes content after it' },
-  { id:'m-fuzz-1', agent_name:'pandas-ai', mode:'fuzz', silent_count:1, crash_count:0, faults_total:1, faults_handled:0,
-    assertions_passed:6, assertions_total:7, resilience:86, duration_ms:2100, git_sha:'9f2b341', git_branch:'feat/nan-handling', source:'ci',
-    created_at: new Date(Date.now()-5*86400000).toISOString(),
-    _finding:'NaN returned as a valid number' },
-  { id:'m-fuzz-2', agent_name:'openinference-tracer', mode:'fuzz', silent_count:1, crash_count:0, faults_total:1, faults_handled:0,
-    assertions_passed:5, assertions_total:6, resilience:83, duration_ms:1670, git_sha:'c5a7e20', git_branch:'main', source:'ci',
-    created_at: new Date(Date.now()-6*86400000).toISOString(),
-    _finding:'token count written to USD cost field' },
-  { id:'m-scenarios-1', agent_name:'order-agent', mode:'scenarios', silent_count:1, crash_count:0, faults_total:1, faults_handled:0,
-    assertions_passed:11, assertions_total:12, resilience:92, duration_ms:3400, git_sha:'a1d8c95', git_branch:'main', source:'local',
-    created_at: new Date(Date.now()-1*86400000).toISOString(),
-    _finding:'shipped 3 units when only 2 in stock (glue code bug)' },
-  { id:'m-replay-1', agent_name:'refund-agent', mode:'replay', silent_count:1, crash_count:0, faults_total:1, faults_handled:0,
-    assertions_passed:7, assertions_total:8, resilience:88, duration_ms:1890, git_sha:'a3f7c12', git_branch:'main', source:'ci',
-    created_at: new Date(Date.now()-4*3600000).toISOString(),
-    _finding:'DECLINE → REFUND after model bump' },
-  { id:'m-mine-1', agent_name:'shipping-agent', mode:'mine', silent_count:1, crash_count:0, faults_total:1, faults_handled:0,
-    assertions_passed:46, assertions_total:47, resilience:98, duration_ms:4200, git_sha:'e9b3f01', git_branch:'main', source:'ci',
-    created_at: new Date(Date.now()-8*3600000).toISOString(),
-    _finding:'skipped validate_address before ship_package' },
-  { id:'m-chaos-1', agent_name:'support-agent', mode:'chaos', silent_count:0, crash_count:0, faults_total:6, faults_handled:5,
-    assertions_passed:29, assertions_total:30, resilience:97, duration_ms:5100, git_sha:'f2c4d87', git_branch:'main', source:'ci',
-    created_at: new Date(Date.now()-12*3600000).toISOString(),
-    _finding:'resilience: 5/6 chaos faults handled' }
-];
-
 fl.ready(async function(ctx){
   var view=document.getElementById('view'), pid=fl.currentProject();
   view.innerHTML='<div class="wrap"><div class="skel" style="height:64px"></div><div class="skel" style="height:36px"></div><div class="skel" style="height:340px"></div></div>';
-  var dbRuns=await fl.getRuns(pid,{limit:100});
-  // merge DB runs (chaos suite) with multi-mode mock runs
-  RUNS = MODE_MOCK.concat(dbRuns);
+  // Real runs only — every row here came from a `faultline run --push` against this project.
+  RUNS = await fl.getRuns(pid,{limit:100});
   // apply ?mode= filter from URL
   var urlMode = fl.qs('mode'); if(urlMode) MODE_FILTER=urlMode;
   if(!RUNS.length){ view.innerHTML=emptyRuns(ctx); return; }
