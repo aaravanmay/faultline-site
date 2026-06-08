@@ -104,9 +104,13 @@ async function deleteProject(){
     for(var i=0;i<children.length;i++){
       try{ await fl.sb.from(children[i]).delete().eq('project_id', pid); }catch(e){}
     }
-    var r = await fl.sb.from('projects').delete().eq('id', pid);
+    var r = await fl.sb.from('projects').delete().eq('id', pid).select();
     if(r.error) throw r.error;
+    if(!r.data || !r.data.length){
+      throw new Error('Delete was blocked — your account may not have permission to delete this project.');
+    }
     localStorage.removeItem('fl_project');
+    try{ sessionStorage.setItem('fl_deleted','1'); }catch(e){}   // so app.js won't auto-recreate it
     fl.toast('Project deleted');
     setTimeout(function(){ location.href = 'overview.html'; }, 650);
   }catch(e){

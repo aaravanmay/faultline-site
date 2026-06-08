@@ -106,8 +106,11 @@
     if(!s){ location.replace("/index.html#signin"); return; }
     ctx.session=s; ctx.user=s.user;
     await loadContext();
-    // Ensure a project exists so the dashboard is ALWAYS reachable (never loop back to onboarding).
-    if(!ctx.project && ctx.orgId && !/onboarding\.html/.test(location.pathname)){
+    // Did the user just deliberately delete their last project? Then DON'T auto-recreate one.
+    var _jd=false; try{ _jd=!!sessionStorage.getItem("fl_deleted"); if(_jd) sessionStorage.removeItem("fl_deleted"); }catch(e){}
+    // Ensure a project exists so the dashboard is ALWAYS reachable (never loop back to onboarding) —
+    // but never right after a deliberate delete.
+    if(!ctx.project && ctx.orgId && !_jd && !/onboarding\.html/.test(location.pathname)){
       try{
         var npid=await createProject(ctx.orgId,"My agent","my-agent");
         if(npid){ try{ await mintToken(npid,"CI token"); }catch(e){} localStorage.setItem("fl_project",npid); }
