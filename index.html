@@ -540,17 +540,17 @@ fl.scenarios(
 )</div>
           <p class="lcx-note">One rule. No LLM judge to flake, no model to configure.</p>
         </div>
-        <div class="lcx-step reveal" style="transition-delay:.09s">
+        <div class="lcx-step reveal">
           <div class="lcx-num" style="background:var(--silent)">2</div>
           <h4>It tests six ways</h4>
-          <p class="d">On honest, valid inputs — never tricks — faultline stress-tests your agent from six angles at once.</p>
+          <p class="d">faultline tests your agent six ways at once — mostly on honest, valid inputs (chaos is the one clearly-labeled stress test).</p>
           <div class="lcx-code"><span style="color:#7CC4F5">probe</span>    <span style="color:#7CC4F5">fuzz</span>    <span style="color:#7CC4F5">scenarios</span>
 <span style="color:#cdd6e6">replay</span>   <span style="color:#cdd6e6">mine</span>    <span style="color:#E0A23C">chaos</span>
 
 <span style="color:#6B7280">running honest edge cases…</span></div>
           <p class="lcx-note">Probe, fuzz and scenarios find real bugs. Replay and mine catch regressions. Chaos tests resilience.</p>
         </div>
-        <div class="lcx-step reveal" style="transition-delay:.18s;border-color:var(--blue-line)">
+        <div class="lcx-step reveal" style="border-color:var(--blue-line)">
           <div class="lcx-num" style="background:#16A34A">3</div>
           <h4>It catches the silent wrong</h4>
           <p class="d">When your agent confidently does the wrong thing with <strong>no error</strong>, faultline flags it deterministically and fails the build.</p>
@@ -820,10 +820,16 @@ fl.scenarios(
       // hero shot un-tilt on scroll
       gsap.to('#heroShot',{rotateX:0,scale:1,ease:'none',scrollTrigger:{trigger:'.shot',start:'top 75%',end:'top 25%',scrub:1}});
 
-      // section reveals
-      gsap.utils.toArray('section .reveal, .logos-sec .reveal').forEach(el=>{
+      // section reveals (the lcx step cards are revealed as one group below — exclude here)
+      gsap.utils.toArray('section .reveal:not(.lcx-step), .logos-sec .reveal').forEach(el=>{
         gsap.to(el,{opacity:1,y:0,duration:.9,ease:'power3.out',scrollTrigger:{trigger:el,start:'top 86%'}});
       });
+      // "How faultline works" 3 cards reveal together (tight stagger) when the grid enters
+      var _lcx=document.querySelector('.lcx-grid');
+      if(_lcx){
+        gsap.to(_lcx.querySelectorAll('.lcx-step'),{opacity:1,y:0,duration:.7,ease:'power3.out',stagger:.07,
+          scrollTrigger:{trigger:_lcx,start:'top 88%'}});
+      }
 
       // lateral fault library — pinned horizontal scroll (desktop + motion only; vertical stack on mobile/reduced-motion)
       (function(){
