@@ -510,6 +510,37 @@
       <p class="sub" style="margin-top:18px;max-width:52ch">faultline found these in famous open-source AI projects — on honest inputs with no tricks. Every failure is a real agent bug, not "garbage in, garbage out."</p>
     </div>
 
+    <!-- Measured, not claimed — the benchmark band -->
+    <style>
+      .bm{max-width:1000px;margin:44px auto 0;background:var(--surface);border:1px solid var(--line);border-radius:18px;box-shadow:var(--sh-sm);overflow:hidden}
+      .bm-head{padding:18px 26px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+      .bm-grid{display:grid;grid-template-columns:repeat(4,1fr)}
+      .bm-cell{padding:26px 18px;text-align:center;border-right:1px solid var(--line)}
+      .bm-cell:last-child{border-right:none}
+      .bm-num{font-size:34px;font-weight:700;letter-spacing:-.02em;color:var(--ink);line-height:1}
+      .bm-num span{font-size:19px;color:var(--muted);font-weight:600}
+      .bm-lbl{font-size:12.5px;color:var(--ink2);margin-top:7px;line-height:1.35}
+      .bm-sub{color:var(--muted);font-size:11px;margin-top:2px}
+      .bm-foot{padding:15px 26px;border-top:1px solid var(--line);font-size:12.5px;color:var(--muted);display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap;align-items:center}
+      @media(max-width:620px){.bm-grid{grid-template-columns:repeat(2,1fr)}.bm-cell:nth-child(2){border-right:none}.bm-cell:nth-child(1),.bm-cell:nth-child(2){border-bottom:1px solid var(--line)}}
+    </style>
+    <div class="bm reveal">
+      <div class="bm-head">
+        <span style="font-family:var(--mono);font-size:11.5px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--blue)">Measured, not claimed</span>
+        <span style="font-size:13px;color:var(--muted)">85-case benchmark · independently audited · 100% reproducible</span>
+      </div>
+      <div class="bm-grid">
+        <div class="bm-cell"><div class="bm-num">92.5<span>%</span></div><div class="bm-lbl">injected bugs caught<div class="bm-sub">37 of 40</div></div></div>
+        <div class="bm-cell"><div class="bm-num">4.4<span>%</span></div><div class="bm-lbl">false-alarm rate<div class="bm-sub">2 of 45 safe cases</div></div></div>
+        <div class="bm-cell"><div class="bm-num">100<span>%</span></div><div class="bm-lbl">deterministic<div class="bm-sub">same verdict every run</div></div></div>
+        <div class="bm-cell"><div class="bm-num">0</div><div class="bm-lbl">LLM judges<div class="bm-sub">pure rules, no flake</div></div></div>
+      </div>
+      <div class="bm-foot">
+        <span>Includes cases built to trick it — into false alarms <em>and</em> into missing bugs. Every miss is listed in the report.</span>
+        <a href="https://github.com/aaravanmay/faultline/tree/main/benchmark" target="_blank" rel="noopener" style="color:var(--blue);font-weight:600;white-space:nowrap">Run it yourself →</a>
+      </div>
+    </div>
+
     <!-- Animated step-by-step explainer of a real LangChain bug -->
     <style>
       .lcx{margin-top:52px;max-width:1000px;margin-left:auto;margin-right:auto}
