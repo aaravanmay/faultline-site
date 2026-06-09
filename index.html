@@ -418,36 +418,10 @@
     </div>
   </div></section>
 
-  <!-- HOW -->
+  <!-- SIX WAYS -->
   <section id="how" class="center"><div class="wrap">
     <div class="sechead">
       <span class="eyebrow reveal">How it works</span>
-      <h2 class="reveal" style="margin-top:14px">Silent-failure testing,<br>six ways.</h2>
-      <p class="sub reveal">Point faultline at your agent. It tests it six different ways — probing edge cases, fuzzing inputs, running honest scenarios, replaying recorded traces, learning rules from good runs, and stress-testing resilience — then fails the build on any silent wrong answer.</p>
-    </div>
-    <div class="fgrid">
-      <div class="fcard reveal" style="text-align:left">
-        <div class="ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2 4 14h7l-1 8 9-12h-7z" stroke-linejoin="round"/></svg></div>
-        <h3>1 · Define what must hold</h3>
-        <p>Feed valid-but-edge inputs and assert a behavioral rule that must always be true — regardless of model, version, or prompt change.</p>
-      </div>
-      <div class="fcard reveal" style="text-align:left">
-        <div class="ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3" stroke-linecap="round"/></svg></div>
-        <h3>2 · Catch the silent wrong</h3>
-        <p>If the agent acts on bad data with no error — no exception, no warning, no sign of doubt — that's a silent failure. Caught deterministically, never on a fluke.</p>
-      </div>
-      <div class="fcard reveal" style="text-align:left">
-        <div class="ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
-        <h3>3 · Fix it & gate it</h3>
-        <p>Get the exact failure, a suggested fix, and a re-run that proves it's gone — locked into your CI so it never ships again.</p>
-      </div>
-    </div>
-  </div></section>
-
-  <!-- SIX WAYS -->
-  <section id="sixways" class="center"><div class="wrap">
-    <div class="sechead">
-      <span class="eyebrow reveal">Six testing modes</span>
       <h2 class="reveal" style="margin-top:14px">One tool. Six ways to<br>find the silent wrong.</h2>
       <p class="sub reveal">probe, fuzz, and scenarios are the honest bug-finders — they run your real agent against real rules on honest inputs. replay and mine protect against regressions. chaos is a resilience test, clearly labeled.</p>
     </div>
@@ -690,16 +664,14 @@ fl.scenarios(
         </div>
       </div>
     </div>
-  </div></section>
 
-  <!-- GET STARTED / TUTORIAL -->
-  <section id="getstarted" class="center"><div class="wrap">
-    <div class="sechead reveal" style="margin:0 auto">
-      <span class="eyebrow">Get started</span>
-      <h2 style="margin-top:14px">Catch your first bug<br>in 60 seconds.</h2>
-      <p class="sub" style="margin-top:18px;max-width:50ch">Install it, write one rule your agent must never break, and run it. faultline breaks the tool on purpose and catches the silent failure — start to finish:</p>
-    </div>
-    <div style="margin-top:40px;max-width:880px;margin-left:auto;margin-right:auto" class="reveal">
+    <div class="center" style="margin-top:90px">
+      <div class="sechead reveal" style="margin:0 auto">
+        <span class="eyebrow">Get started</span>
+        <h2 style="margin-top:14px">Catch your first bug<br>in 60 seconds.</h2>
+        <p class="sub" style="margin-top:18px;max-width:50ch">Install it, write one rule your agent must never break, and run it — start to finish, unedited:</p>
+      </div>
+      <div style="margin-top:40px;max-width:880px;margin-left:auto;margin-right:auto" class="reveal">
       <video controls autoplay muted loop playsinline preload="metadata" style="width:100%;border-radius:14px;box-shadow:var(--sh-lg);display:block;background:#0A0E17">
         <source src="media/tutorial.mp4" type="video/mp4">
       </video>
@@ -715,6 +687,7 @@ fl.scenarios(
         <div style="font-weight:600;font-size:15px;margin-bottom:6px">Want AI-suggested fixes?</div>
         <p style="font-size:13.5px;color:var(--ink2);line-height:1.55">Connect your own <strong>Anthropic API key</strong> to test live LLM agents and get concrete fix suggestions. Your key, your usage — never sent to us.</p>
       </div>
+    </div>
     </div>
   </div></section>
 
@@ -733,19 +706,15 @@ fl.scenarios(
       <div class="crow us"><span class="lbl">Acting on stale / corrupted tool data</span><span class="x">—</span><span class="ok">✓</span></div>
       <div class="crow"><span class="lbl">Runs in your CI, never sees your data</span><span class="x">varies</span><span class="ok">✓</span></div>
     </div>
-  </div></section>
-
-  <!-- OPEN SOURCE -->
-  <section id="opensource" class="center"><div class="wrap">
-    <div class="sechead reveal" style="margin:0 auto">
-      <span class="eyebrow">Open source</span>
-      <h2 style="margin-top:14px">Free. MIT-licensed.<br>Yours forever.</h2>
-      <p class="sub" style="margin-top:18px;max-width:48ch">The whole engine — every testing mode, the CLI, the GitHub Action — is free and open source. It runs in your own CI and never sees your data.</p>
-      <div style="margin-top:26px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
+    <div class="center reveal" style="margin-top:74px">
+      <h2 style="font-size:clamp(26px,3.4vw,40px)">Free. MIT-licensed. Yours forever.</h2>
+      <p class="sub" style="margin-top:12px;max-width:48ch;margin-left:auto;margin-right:auto">The whole engine — every testing mode, the CLI, the GitHub Action — is open source. It runs in your own CI and never sees your data.</p>
+      <div style="margin-top:24px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
         <a class="btn pri mag" href="https://github.com/aaravanmay/faultline" target="_blank" rel="noopener">View on GitHub →</a>
         <span class="install-pill">pip install faultline</span>
       </div>
     </div>
+
   </div></section>
 
   <!-- FAQ -->
@@ -764,7 +733,7 @@ fl.scenarios(
     <span class="eyebrow reveal">The only test suite that lies to your agent on purpose</span>
     <h2 class="reveal" style="margin-top:16px">Find the silent failures<br>before your users do.</h2>
     <div class="cta reveal" style="margin-top:30px;display:flex;gap:14px;justify-content:center;flex-wrap:wrap">
-      <a class="btn pri mag" data-auth="signup" href="#">Start free</a><a class="btn sec mag" href="#">Read the docs →</a>
+      <a class="btn pri mag" data-auth="signup" href="#">Start free</a><a class="btn sec mag" href="https://github.com/aaravanmay/faultline#readme" target="_blank" rel="noopener">Read the docs →</a>
     </div>
   </div></section>
 
