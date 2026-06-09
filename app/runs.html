@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 28'%3E%3Cpath d='M3 10H17' stroke='%232563EB' stroke-width='3.4' fill='none' stroke-linecap='round'/%3E%3Cpath d='M17 10L23 18' stroke='%232563EB' stroke-width='3.4' fill='none' stroke-linecap='round'/%3E%3Cpath d='M23 18H37' stroke='%232563EB' stroke-width='3.4' fill='none' stroke-linecap='round'/%3E%3C/svg%3E">
 <title>Runs — faultline</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="app.css">
 </head>
 <body data-page="runs">
@@ -40,7 +40,7 @@ function emptyRuns(ctx){
     '<a class="btn sec" href="integrations.html">Set up CI</a></div></div></div>';
 }
 
-var MODE_COLORS={probe:'#38BDF8',fuzz:'#818CF8',scenarios:'#34D399',replay:'#F59E0B',mine:'#A78BFA',chaos:'#9aa3b2'};
+var MODE_COLORS={probe:'#38BDF8',fuzz:'#818CF8',scenarios:'#3FB950',replay:'#E8A33D',mine:'#A78BFA',chaos:'#9aa3b2'};
 var ALL_MODES=['probe','fuzz','scenarios','replay','mine','chaos'];
 
 function modeTag(mode){
@@ -48,8 +48,8 @@ function modeTag(mode){
   var styles={
     probe:'background:rgba(56,189,248,.15);color:#38BDF8;border:1px solid rgba(56,189,248,.25)',
     fuzz:'background:rgba(129,140,248,.15);color:#818CF8;border:1px solid rgba(129,140,248,.25)',
-    scenarios:'background:rgba(52,211,153,.12);color:#34D399;border:1px solid rgba(52,211,153,.22)',
-    replay:'background:rgba(245,158,11,.12);color:#F59E0B;border:1px solid rgba(245,158,11,.22)',
+    scenarios:'background:rgba(63,185,80,.12);color:#3FB950;border:1px solid rgba(63,185,80,.22)',
+    replay:'background:rgba(232,163,61,.12);color:#E8A33D;border:1px solid rgba(232,163,61,.22)',
     mine:'background:rgba(167,139,250,.12);color:#A78BFA;border:1px solid rgba(167,139,250,.22)',
     chaos:'background:rgba(107,114,128,.12);color:#9aa3b2;border:1px solid rgba(107,114,128,.25)'
   };

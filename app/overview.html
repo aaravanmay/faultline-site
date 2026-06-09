@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 28'%3E%3Cpath d='M3 10H17' stroke='%232563EB' stroke-width='3.4' fill='none' stroke-linecap='round'/%3E%3Cpath d='M17 10L23 18' stroke='%232563EB' stroke-width='3.4' fill='none' stroke-linecap='round'/%3E%3Cpath d='M23 18H37' stroke='%232563EB' stroke-width='3.4' fill='none' stroke-linecap='round'/%3E%3C/svg%3E">
 <title>Overview — faultline</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="app.css">
 </head>
 <body data-page="overview">
@@ -87,7 +87,7 @@ function renderOverview(ov, ctx, tok){
 
   // metric cards — four clean tiles with sparklines
   h+='<div class="metric-row">'+
-     metric('Silent failures caught', ov.silentCaught, 'am', fl.sparkline(spread(ov.runs,'silent_count'),'#F59E0B'), 'across recent runs')+
+     metric('Silent failures caught', ov.silentCaught, 'am', fl.sparkline(spread(ov.runs,'silent_count'),'#E8A33D'), 'across recent runs')+
      metric('Agents monitored', ov.agentCount, '', barspark(), 'in this project')+
      metric('Last run', fl.rel(L.created_at).replace(' ago',''), 'cy', fl.sparkline(last7,'#38BDF8'), 'ago · '+(L.assertions_total||0)+' assertions')+
      metric('Open regressions', ov.openRegs.length, ov.openRegs.length?'am':'', regspark(ov.openRegs.length), reg?(fl.esc(reg.fault)+' · '+fl.rel(reg.detected_at).replace(' ago','')+' open'):'none open')+
@@ -131,7 +131,7 @@ function metric(lbl,val,cls,spark,sub){
 }
 function spread(runs,key){ var a=runs.slice(-8).map(function(r){return +r[key]||0;}); return a.length>1?a:[0,1,1,2,2,3]; }
 function barspark(){ return '<svg class="spark" viewBox="0 0 62 26" fill="none"><g fill="#3B82F6" opacity=".5"><rect x="2" y="14" width="5" height="11" rx="1.5"/><rect x="11" y="10" width="5" height="15" rx="1.5"/><rect x="20" y="13" width="5" height="12" rx="1.5"/><rect x="29" y="8" width="5" height="17" rx="1.5"/><rect x="38" y="11" width="5" height="14" rx="1.5"/><rect x="47" y="6" width="5" height="19" rx="1.5"/><rect x="56" y="10" width="5" height="15" rx="1.5"/></g></svg>'; }
-function regspark(n){ var c=n?'#F59E0B':'#828A9A'; return '<svg class="spark" viewBox="0 0 62 26" fill="none"><path d="M1 20 L12 19 L20 18 L27 '+(n?'5':'17')+' L33 '+(n?'3':'16')+' L40 13 L50 15 L61 14" stroke="'+c+'" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity=".85"/></svg>'; }
+function regspark(n){ var c=n?'#E8A33D':'#868F97'; return '<svg class="spark" viewBox="0 0 62 26" fill="none"><path d="M1 20 L12 19 L20 18 L27 '+(n?'5':'17')+' L33 '+(n?'3':'16')+' L40 13 L50 15 L61 14" stroke="'+c+'" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity=".85"/></svg>'; }
 
 function filterRuns(runs, days){ if(days>=365) return runs; var cut=Date.now()-days*864e5; return runs.filter(function(r){return new Date(r.created_at).getTime()>=cut;}); }
 function flSetChart(days, el){
@@ -145,14 +145,14 @@ function chart(runs, regs){
   var pts=runs.map(function(r,i){ return [ x0+(i/(runs.length-1))*(x1-x0), y1-(+r.resilience/100)*(y1-y0) ]; });
   var line=pts.map(function(p,i){return (i?'L':'M')+p[0].toFixed(1)+' '+p[1].toFixed(1);}).join(' ');
   var area=line+' L'+x1+' '+y1+' L'+x0+' '+y1+' Z';
-  var grid='';[0,25,50,75,100].forEach(function(v){ var y=y1-(v/100)*(y1-y0); grid+='<line x1="'+x0+'" y1="'+y+'" x2="'+x1+'" y2="'+y+'" stroke="#1B1E27" stroke-width="'+(v===0?1:.5)+'"/><text x="'+(x0-8)+'" y="'+(y+3)+'" font-family="JetBrains Mono" font-size="9.5" fill="#828A9A" text-anchor="end">'+v+'</text>'; });
-  var xlabs='', nlab=Math.min(4,runs.length); for(var k=0;k<nlab;k++){ var ix=Math.round(k*(runs.length-1)/(nlab-1)); var px=x0+(ix/(runs.length-1))*(x1-x0); var anc=k===0?'start':(k===nlab-1?'end':'middle'); var lab=new Date(runs[ix].created_at).toLocaleDateString('en-US',{month:'short',day:'numeric'}); xlabs+='<text x="'+px.toFixed(1)+'" y="'+(H-7)+'" font-family="JetBrains Mono" font-size="9.5" fill="#828A9A" text-anchor="'+anc+'">'+lab+'</text>'; }
-  var marks='';(regs||[]).forEach(function(rg){ var idx=-1; for(var i=0;i<runs.length;i++){ if(new Date(runs[i].created_at)>=new Date(rg.detected_at)){ idx=i; break; } } if(idx<0) return; var p=pts[idx]; marks+='<line x1="'+p[0]+'" y1="'+y0+'" x2="'+p[0]+'" y2="'+y1+'" stroke="rgba(245,158,11,.25)" stroke-width="1" stroke-dasharray="3,3"/><circle cx="'+p[0]+'" cy="'+p[1]+'" r="4" fill="rgba(245,158,11,.15)" stroke="#F59E0B" stroke-width="1.5"/>'; });
+  var grid='';[0,25,50,75,100].forEach(function(v){ var y=y1-(v/100)*(y1-y0); grid+='<line x1="'+x0+'" y1="'+y+'" x2="'+x1+'" y2="'+y+'" stroke="#1F2124" stroke-width="'+(v===0?1:.5)+'"/><text x="'+(x0-8)+'" y="'+(y+3)+'" font-family="JetBrains Mono" font-size="9.5" fill="#868F97" text-anchor="end">'+v+'</text>'; });
+  var xlabs='', nlab=Math.min(4,runs.length); for(var k=0;k<nlab;k++){ var ix=Math.round(k*(runs.length-1)/(nlab-1)); var px=x0+(ix/(runs.length-1))*(x1-x0); var anc=k===0?'start':(k===nlab-1?'end':'middle'); var lab=new Date(runs[ix].created_at).toLocaleDateString('en-US',{month:'short',day:'numeric'}); xlabs+='<text x="'+px.toFixed(1)+'" y="'+(H-7)+'" font-family="JetBrains Mono" font-size="9.5" fill="#868F97" text-anchor="'+anc+'">'+lab+'</text>'; }
+  var marks='';(regs||[]).forEach(function(rg){ var idx=-1; for(var i=0;i<runs.length;i++){ if(new Date(runs[i].created_at)>=new Date(rg.detected_at)){ idx=i; break; } } if(idx<0) return; var p=pts[idx]; marks+='<line x1="'+p[0]+'" y1="'+y0+'" x2="'+p[0]+'" y2="'+y1+'" stroke="rgba(232,163,61,.25)" stroke-width="1" stroke-dasharray="3,3"/><circle cx="'+p[0]+'" cy="'+p[1]+'" r="4" fill="rgba(232,163,61,.15)" stroke="#E8A33D" stroke-width="1.5"/>'; });
   var end=pts[pts.length-1];
   return '<svg width="100%" viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="xMidYMid meet" style="overflow:visible">'+
     '<defs><linearGradient id="ag" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3B82F6" stop-opacity=".22"/><stop offset="1" stop-color="#3B82F6" stop-opacity="0"/></linearGradient></defs>'+
     grid+xlabs+'<path d="'+area+'" fill="url(#ag)"/><path d="'+line+'" stroke="#3B82F6" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round" style="filter:drop-shadow(0 0 3px rgba(59,130,246,.6))"/>'+
-    marks+'<circle cx="'+end[0]+'" cy="'+end[1]+'" r="5" fill="rgba(56,189,248,.2)" stroke="#38BDF8" stroke-width="1.5"/><circle cx="'+end[0]+'" cy="'+end[1]+'" r="2.5" fill="#38BDF8"/></svg>';
+    marks+'<circle cx="'+end[0]+'" cy="'+end[1]+'" r="5" fill="rgba(63,185,80,.2)" stroke="#38BDF8" stroke-width="1.5"/><circle cx="'+end[0]+'" cy="'+end[1]+'" r="2.5" fill="#38BDF8"/></svg>';
 }
 
 // Shared "how to use faultline" walkthrough — empty-state on overview + getting-started.html

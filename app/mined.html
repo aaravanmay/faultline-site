@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 28'%3E%3Cpath d='M3 10H17' stroke='%232563EB' stroke-width='3.4' fill='none' stroke-linecap='round'/%3E%3Cpath d='M17 10L23 18' stroke='%232563EB' stroke-width='3.4' fill='none' stroke-linecap='round'/%3E%3Cpath d='M23 18H37' stroke='%232563EB' stroke-width='3.4' fill='none' stroke-linecap='round'/%3E%3C/svg%3E">
 <title>Mined Rules — faultline</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="app.css">
 <style>
 .rule-row{display:flex;align-items:flex-start;gap:16px;padding:16px 20px}
@@ -21,7 +21,7 @@
 .status-enforced::before{content:"";width:5px;height:5px;border-radius:50%;background:currentColor;flex-shrink:0}
 .status-watching{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;letter-spacing:.03em;text-transform:uppercase;padding:3px 9px;border-radius:20px;background:rgba(130,138,154,.1);color:var(--muted);border:1px dashed rgba(130,138,154,.4)}
 .status-watching::before{content:"";width:5px;height:5px;border-radius:50%;background:currentColor;flex-shrink:0}
-.violation-row{padding:10px 18px;background:rgba(245,158,11,.04);border-left:2px solid rgba(245,158,11,.4)}
+.violation-row{padding:10px 18px;background:rgba(232,163,61,.04);border-left:2px solid rgba(232,163,61,.4)}
 .violation-row+.violation-row{border-top:1px solid rgba(255,255,255,.03)}
 </style>
 </head>
@@ -78,7 +78,7 @@ function render(ctx){
       r.violations.forEach(function(v){
         h+='<div class="violation-row">'+
            '<div style="display:flex;align-items:center;gap:8px">'+
-             '<svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M6.5 2.5v4M6.5 8.5v.5" stroke="#F59E0B" stroke-width="1.4" stroke-linecap="round"/><path d="M1 11L6.5 1l5.5 10H1Z" stroke="#F59E0B" stroke-width="1.1" stroke-linejoin="round"/></svg>'+
+             '<svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M6.5 2.5v4M6.5 8.5v.5" stroke="#E8A33D" stroke-width="1.4" stroke-linecap="round"/><path d="M1 11L6.5 1l5.5 10H1Z" stroke="#E8A33D" stroke-width="1.1" stroke-linejoin="round"/></svg>'+
              '<span style="font-size:12px;color:var(--silent)">Violation detected</span>'+
              '<span class="fault-tag" style="font-family:var(--mono);font-size:10px">'+fl.esc(v.run)+'</span>'+
              '<span style="font-size:11.5px;color:var(--faint);font-family:var(--mono);margin-left:auto">'+fl.rel(v.when)+'</span>'+
@@ -109,7 +109,7 @@ function ruleRow(r){
         '<span>'+r.agent+'</span>'+
         '<span class="dot"></span>'+
         '<span>learned from '+r.learned_from+' runs</span>'+
-        (hasViolation?('<span class="dot"></span><span style="color:var(--silent)">'+r.violations.length+' violation'+(r.violations.length===1?'':'s')+'</span>'):'<span class="dot"></span><span style="color:#34D399">no violations</span>')+
+        (hasViolation?('<span class="dot"></span><span style="color:var(--silent)">'+r.violations.length+' violation'+(r.violations.length===1?'':'s')+'</span>'):'<span class="dot"></span><span style="color:#3FB950">no violations</span>')+
       '</div>'+
     '</div>'+
     '<div class="rule-status">'+status+'</div>'+

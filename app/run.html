@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 28'%3E%3Cpath d='M3 10H17' stroke='%232563EB' stroke-width='3.4' fill='none' stroke-linecap='round'/%3E%3Cpath d='M17 10L23 18' stroke='%232563EB' stroke-width='3.4' fill='none' stroke-linecap='round'/%3E%3Cpath d='M23 18H37' stroke='%232563EB' stroke-width='3.4' fill='none' stroke-linecap='round'/%3E%3C/svg%3E">
 <title>Run — faultline</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="app.css">
 <style>
 /* run-detail extras — built on the same CSS variables as app.css */
@@ -13,11 +13,11 @@
 .vbanner .ic{width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
 .vbanner .vt{font-size:15px;font-weight:650;letter-spacing:-.01em}
 .vbanner .vd{font-size:12.5px;margin-top:3px;opacity:.92}
-.vbanner.fail{background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.25);color:#f5c074}
-.vbanner.fail .ic{background:rgba(245,158,11,.16);color:var(--silent)}
+.vbanner.fail{background:rgba(232,163,61,.1);border:1px solid rgba(232,163,61,.25);color:#f5c074}
+.vbanner.fail .ic{background:rgba(232,163,61,.16);color:var(--silent)}
 .vbanner.crash{background:rgba(107,114,128,.14);border:1px solid rgba(107,114,128,.3);color:#aab2c0}
 .vbanner.crash .ic{background:rgba(107,114,128,.22);color:#c4cad6}
-.vbanner.pass{background:rgba(56,189,248,.08);border:1px solid rgba(56,189,248,.2);color:#9cdcff}
+.vbanner.pass{background:rgba(56,189,248,.08);border:1px solid rgba(63,185,80,.2);color:#9cdcff}
 .vbanner.pass .ic{background:rgba(56,189,248,.14);color:var(--cyan)}
 .meta-strip{display:flex;align-items:center;flex-wrap:wrap;gap:8px 14px;font-family:var(--mono);font-size:12px;color:var(--muted)}
 .meta-strip .dot{width:3px;height:3px;border-radius:50%;background:var(--faint)}
@@ -179,7 +179,7 @@ function renderRun(run, faults, prev){
            '<span class="verdict '+fl.verdictClass(c.from)+'">'+fl.verdictLabel(c.from)+'</span>'+
            '<span class="cmp-arrow">→</span>'+
            '<span class="verdict '+fl.verdictClass(c.to)+'">'+fl.verdictLabel(c.to)+'</span>'+
-           (c.regressed?'<span class="fault-tag" style="color:var(--silent);border-color:rgba(245,158,11,.25);background:rgba(245,158,11,.1)">regressed</span>'
+           (c.regressed?'<span class="fault-tag" style="color:var(--silent);border-color:rgba(232,163,61,.25);background:rgba(232,163,61,.1)">regressed</span>'
                        :'<span class="fault-tag" style="color:var(--cyan);border-color:rgba(56,189,248,.18);background:rgba(56,189,248,.08)">improved</span>')+
            '</div>';
       });
