@@ -63,14 +63,24 @@ fl.ready(async function(ctx){
   var checkCode =
     '<span class="cmt"># faultline_suite.py</span>\n'+
     'import faultline as fl\n\n'+
-    '<span class="cmt"># One rule your agent must never break</span>\n'+
+    '<span class="cmt"># wrap the tool faultline is allowed to break</span>\n'+
+    '@fl.tool\n'+
+    'def get_inventory(item):\n'+
+    '    return 2                       # really only 2 in stock\n\n'+
+    'def agent(task):\n'+
+    '    stock = get_inventory(task["item"])\n'+
+    '    ordered = task["qty"] if task["qty"] &lt;= stock else 0\n'+
+    '    return {"ordered": ordered, "asked": task["qty"]}\n\n'+
+    '<span class="cmt"># the one rule your agent must never break</span>\n'+
     'def never_oversell(run):\n'+
-    '    o = run["output"]\n'+
-    '    if o.get("ordered", 0) &gt; o.get("stock", 0):\n'+
-    '        return "ordered more than in stock"\n\n'+
-    'fl.check(agent, task,\n'+
-    '    faults=[fl.WrongNumber(targets=["inventory"])],\n'+
-    '    invariants=[never_oversell])';
+    '    if run["output"]["ordered"] &gt; 2:        # 2 = the real stock\n'+
+    '        return "ordered more than is in stock"\n\n'+
+    '<span class="cmt"># faultline run faultline_suite.py looks for this</span>\n'+
+    'def faultline_suite():\n'+
+    '    return {"agent": agent,\n'+
+    '            "task": {"item": "widget", "qty": 5},\n'+
+    '            "faults": [fl.WrongNumber(targets=["get_inventory"])],\n'+
+    '            "invariants": [never_oversell]}';
 
   var h='<div class="wrap" style="max-width:860px">';
 

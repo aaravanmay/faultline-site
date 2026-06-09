@@ -457,7 +457,7 @@
         </div>
         <h3 style="font-family:var(--mono);font-size:20px;letter-spacing:-.01em">probe</h3>
         <p style="margin-top:8px">Feed valid-but-edge inputs. Assert a rule that must always hold. If the agent violates it — even once, on clean data — that's a real bug.</p>
-        <div style="margin-top:14px;font-family:var(--mono);font-size:12px;color:var(--muted);background:#F8F7F5;border-radius:8px;padding:10px 12px;border:1px solid var(--line)">faultline probe --rule "never hallucinate a value"</div>
+        <div style="margin-top:14px;font-family:var(--mono);font-size:12px;color:var(--muted);background:#F8F7F5;border-radius:8px;padding:10px 12px;border:1px solid var(--line)">fl.probe(my_fn, cases, properties)</div>
       </div>
       <div class="fcard reveal" style="text-align:left;border-top:3px solid var(--blue)">
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
@@ -465,7 +465,7 @@
         </div>
         <h3 style="font-family:var(--mono);font-size:20px;letter-spacing:-.01em">fuzz</h3>
         <p style="margin-top:8px">Auto-generate edge inputs across the full input space. faultline finds the one combination that breaks the rule — the case you'd never write by hand.</p>
-        <div style="margin-top:14px;font-family:var(--mono);font-size:12px;color:var(--muted);background:#F8F7F5;border-radius:8px;padding:10px 12px;border:1px solid var(--line)">faultline fuzz --agent my_agent --trials 200</div>
+        <div style="margin-top:14px;font-family:var(--mono);font-size:12px;color:var(--muted);background:#F8F7F5;border-radius:8px;padding:10px 12px;border:1px solid var(--line)">fl.fuzz(my_fn, base_input, properties)</div>
       </div>
       <div class="fcard reveal" style="text-align:left;border-top:3px solid var(--blue);position:relative">
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
@@ -473,7 +473,7 @@
         </div>
         <h3 style="font-family:var(--mono);font-size:20px;letter-spacing:-.01em">scenarios</h3>
         <p style="margin-top:8px">Run your agent through honest, hard real situations with a behavioral rule. Nothing is faked — so a failure is a <strong>real agent bug</strong>, not "garbage in, garbage out."</p>
-        <div style="margin-top:14px;font-family:var(--mono);font-size:12px;color:var(--muted);background:#F8F7F5;border-radius:8px;padding:10px 12px;border:1px solid var(--line)">faultline scenarios --suite edge_cases.yaml</div>
+        <div style="margin-top:14px;font-family:var(--mono);font-size:12px;color:var(--muted);background:#F8F7F5;border-radius:8px;padding:10px 12px;border:1px solid var(--line)">fl.scenarios(agent, cases, invariants)</div>
       </div>
       <div class="fcard reveal" style="text-align:left;border-top:3px solid var(--line2)">
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
@@ -481,7 +481,7 @@
         </div>
         <h3 style="font-family:var(--mono);font-size:20px;letter-spacing:-.01em">replay</h3>
         <p style="margin-top:8px">Re-run a recorded trace after a model, prompt, or version change. Catch silent regressions the moment they appear — before users do.</p>
-        <div style="margin-top:14px;font-family:var(--mono);font-size:12px;color:var(--muted);background:#F8F7F5;border-radius:8px;padding:10px 12px;border:1px solid var(--line)">faultline replay --trace run_2024-11-01.jsonl</div>
+        <div style="margin-top:14px;font-family:var(--mono);font-size:12px;color:var(--muted);background:#F8F7F5;border-radius:8px;padding:10px 12px;border:1px solid var(--line)">fl.replay(agent, recorded_trace)</div>
       </div>
       <div class="fcard reveal" style="text-align:left;border-top:3px solid var(--line2)">
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
@@ -489,7 +489,7 @@
         </div>
         <h3 style="font-family:var(--mono);font-size:20px;letter-spacing:-.01em">mine</h3>
         <p style="margin-top:8px">Watch good runs, learn the behavioral rules yourself, then enforce them. faultline observes what "correct" looks like — and alerts when something drifts.</p>
-        <div style="margin-top:14px;font-family:var(--mono);font-size:12px;color:var(--muted);background:#F8F7F5;border-radius:8px;padding:10px 12px;border:1px solid var(--line)">faultline mine --watch ./runs/ --learn</div>
+        <div style="margin-top:14px;font-family:var(--mono);font-size:12px;color:var(--muted);background:#F8F7F5;border-radius:8px;padding:10px 12px;border:1px solid var(--line)">fl.mine(agent, good_runs)</div>
       </div>
       <div class="fcard reveal" style="text-align:left;border-top:3px solid rgba(224,131,12,.5)">
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
@@ -497,7 +497,7 @@
         </div>
         <h3 style="font-family:var(--mono);font-size:20px;letter-spacing:-.01em">chaos</h3>
         <p style="margin-top:8px">Break a tool on purpose — wrong data, timeouts, 500s — and test if the agent has a "seatbelt." A resilience test, not a bug-finder. Honestly labeled.</p>
-        <div style="margin-top:14px;font-family:var(--mono);font-size:12px;color:rgba(180,102,10,.8);background:rgba(224,131,12,.05);border-radius:8px;padding:10px 12px;border:1px solid rgba(224,131,12,.18)">faultline chaos --fault wrong_number --target stock_price</div>
+        <div style="margin-top:14px;font-family:var(--mono);font-size:12px;color:rgba(180,102,10,.8);background:rgba(224,131,12,.05);border-radius:8px;padding:10px 12px;border:1px solid rgba(224,131,12,.18)">faultline run faultline_suite.py</div>
       </div>
     </div>
   </div></section>

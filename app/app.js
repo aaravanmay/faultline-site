@@ -26,7 +26,7 @@
       '<defs><linearGradient id="rg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#38BDF8"/><stop offset="1" stop-color="#3B82F6"/></linearGradient></defs>'+
       '<circle cx="'+size/2+'" cy="'+size/2+'" r="'+r+'" fill="none" stroke="#1B1E27" stroke-width="5"/>'+
       '<circle cx="'+size/2+'" cy="'+size/2+'" r="'+r+'" fill="none" stroke="url(#rg)" stroke-width="5" stroke-linecap="round" stroke-dasharray="'+on+' '+c+'" transform="rotate(-90 '+size/2+' '+size/2+')" style="filter:drop-shadow(0 0 4px rgba(56,189,248,.5))"/></svg>'; }
-  function sparkline(vals, color, w, h){ color=color||"#38BDF8"; w=w||62; h=h||26; if(!vals||!vals.length) return "";
+  function sparkline(vals, color, w, h){ color=color||"#38BDF8"; w=w||62; h=h||26; if(!vals||!vals.length) return ""; if(vals.length<2) vals=[vals[0],vals[0]];
     var mn=Math.min.apply(null,vals), mx=Math.max.apply(null,vals), rng=(mx-mn)||1;
     var pts=vals.map(function(v,i){ return [ (i/(vals.length-1))*(w-2)+1, h-2-((v-mn)/rng)*(h-6) ]; });
     var d=pts.map(function(p,i){ return (i?"L":"M")+p[0].toFixed(1)+" "+p[1].toFixed(1); }).join(" ");
@@ -72,7 +72,7 @@
     var ps=shell.querySelector("#projName"); if(ps&&ctx.project) ps.textContent=(ctx.project.org_slug||"")+" / "+ctx.project.slug;
     var psw=shell.querySelector("#projSwitch"); if(psw) psw.addEventListener("click", openProjectSwitcher);
     // regressions badge
-    if(ctx.project){ getRegressions(ctx.orgId,"open").then(function(rs){ var b=shell.querySelector('[data-nav="faults"] .nav-badge, #faultsBadge'); if(b){ if(rs&&rs.length){ b.textContent=rs.length; b.classList.remove("hide"); } else b.classList.add("hide"); } }).catch(function(){}); }
+    if(ctx.project){ getRegressions(ctx.orgId,"open").then(function(rs){ var b=shell.querySelector('#faultsBadge'); if(b){ if(rs&&rs.length){ b.textContent=rs.length; b.classList.remove("hide"); } else b.classList.add("hide"); } }).catch(function(){}); }
   }
   function openProjectSwitcher(){
     if(!ctx.projects.length) return;
