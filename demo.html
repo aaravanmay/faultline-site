@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>faultline — watch it catch a silent failure (30s, no install)</title>
-<meta name="description" content="Inject a fault, run a toy AI agent, and watch faultline catch the moment it silently does the wrong thing — live in your browser, no install." />
+<title>faultline — run the real engine on a live agent, in your browser</title>
+<meta name="description" content="Not an animation: the actual faultline engine compiled to WebAssembly. Break an agent's tools, watch it silently fail, fix the code, prove it. No install." />
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 :root{--bg:#141416;--surface:#1c1c20;--surface2:#212126;--line:rgba(255,255,255,.08);--line2:rgba(255,255,255,.12);
@@ -12,159 +12,230 @@
 --mono:'JetBrains Mono',monospace;--sans:'Inter',system-ui,sans-serif;--ease:cubic-bezier(.22,.61,.36,1)}
 *{margin:0;padding:0;box-sizing:border-box}
 body{background:var(--bg);color:var(--tx);font-family:var(--sans);-webkit-font-smoothing:antialiased;line-height:1.5}
-.wrap{max-width:840px;margin:0 auto;padding:48px 26px 80px}
+.wrap{max-width:860px;margin:0 auto;padding:48px 26px 80px}
 .logo{font-weight:600;font-size:16px;display:flex;align-items:center;gap:9px;justify-content:center}
 .logo .dot{width:9px;height:9px;border-radius:50%;background:var(--indigo2);box-shadow:0 0 0 4px rgba(94,106,210,.16)}
+a{color:inherit;text-decoration:none}
 .eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--indigo);text-align:center;margin-top:26px}
 h1{font-size:clamp(26px,4.5vw,38px);font-weight:600;letter-spacing:-.025em;text-align:center;line-height:1.12;margin:12px 0 10px}
-.sub{color:var(--tx2);text-align:center;font-size:17px;max-width:30em;margin:0 auto 14px}
-.scenario{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:20px 22px;margin:30px 0 22px;font-size:15px;color:var(--tx2)}
+.sub{color:var(--tx2);text-align:center;font-size:17px;max-width:32em;margin:0 auto 14px}
+.engine{display:flex;align-items:center;gap:10px;justify-content:center;margin:18px auto 26px;max-width:40em;background:rgba(94,106,210,.07);border:1px solid rgba(94,106,210,.2);border-radius:10px;padding:11px 16px;font-size:13.5px;color:var(--tx2)}
+.engine b{color:var(--tx);font-weight:600}
+.engine .ed{width:8px;height:8px;border-radius:50%;background:var(--tx3);flex-shrink:0}
+.engine .ed.on{background:var(--green)}
+.scenario{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px 20px;margin:0 0 18px;font-size:14.5px;color:var(--tx2)}
 .scenario b{color:var(--tx)}
-.scenario .tools{font-family:var(--mono);font-size:13px;color:var(--tx3);margin-top:10px}
-.scenario .tools span{color:var(--indigo)}
-.controls{display:flex;flex-wrap:wrap;gap:18px;align-items:flex-end;margin-bottom:22px}
-.fault-pick{flex:1;min-width:260px}
-.fault-pick .lbl{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--tx3);margin-bottom:10px}
-.chips{display:flex;flex-wrap:wrap;gap:8px}
-.chip{font-family:var(--mono);font-size:12.5px;padding:8px 13px;border-radius:8px;border:1px solid var(--line2);background:transparent;color:var(--tx2);cursor:pointer;transition:all .2s var(--ease)}
-.chip:hover{border-color:rgba(255,255,255,.25);color:var(--tx)}
-.chip.on{background:var(--indigo2);border-color:var(--indigo2);color:#fff}
+.lbl{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--tx3);margin:0 0 8px}
+.edwrap{position:relative;margin-bottom:14px}
+textarea{width:100%;min-height:300px;background:#101012;border:1px solid var(--line2);border-radius:12px;padding:16px;color:#c9ccd6;font-family:var(--mono);font-size:12.5px;line-height:1.7;resize:vertical;outline:none;tab-size:4}
+textarea:focus{border-color:rgba(123,133,224,.4)}
+.controls{display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-bottom:18px}
 .run{font-family:var(--sans);font-size:15px;font-weight:500;padding:12px 24px;border-radius:9px;border:none;background:var(--indigo2);color:#fff;cursor:pointer;transition:background .2s,transform .2s var(--ease)}
 .run:hover{background:#6b76dd;transform:translateY(-1px)}.run:disabled{opacity:.5;cursor:default;transform:none}
-.term{background:#101012;border:1px solid var(--line2);border-radius:12px;overflow:hidden;box-shadow:0 30px 70px rgba(0,0,0,.5)}
-.term-bar{display:flex;align-items:center;gap:7px;padding:13px 15px;border-bottom:1px solid var(--line)}
-.term-bar i{width:11px;height:11px;border-radius:50%;background:#2c2c31}
-.term-bar .t{font-family:var(--mono);font-size:11px;color:var(--tx3);margin-left:8px}
-.term-body{padding:20px 20px 22px;font-family:var(--mono);font-size:13.5px;line-height:1.95;min-height:230px}
-.ln{opacity:0;transform:translateY(6px);transition:opacity .35s var(--ease),transform .35s var(--ease)}
-.ln.in{opacity:1;transform:none}
-.dim{color:var(--tx3)}.ok{color:var(--green)}.bad{color:var(--red)}.key{color:var(--indigo)}.tx{color:var(--tx2)}
-.verdict{margin-top:18px;border-radius:12px;padding:18px 22px;border:1px solid var(--line);opacity:0;transform:translateY(8px);transition:opacity .5s var(--ease),transform .5s var(--ease)}
-.verdict.in{opacity:1;transform:none}
-.verdict.pass{border-color:rgba(90,167,117,.4);background:rgba(90,167,117,.07)}
-.verdict.fail{border-color:rgba(200,89,93,.45);background:rgba(200,89,93,.08)}
-.verdict .v{font-family:var(--mono);font-size:13px;font-weight:500;display:flex;align-items:center;gap:9px}
-.verdict .v .d{width:9px;height:9px;border-radius:50%}
-.verdict.pass .v .d{background:var(--green)}.verdict.fail .v .d{background:var(--red)}
-.verdict p{color:var(--tx2);font-size:14.5px;margin-top:9px;line-height:1.55}
-.verdict p b{color:var(--tx)}
-.compare{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:16px;opacity:0;transition:opacity .5s var(--ease)}
-.compare.in{opacity:1}
-@media(max-width:600px){.compare{grid-template-columns:1fr}}
-.cmp{border:1px solid var(--line);border-radius:10px;padding:16px 18px}
-.cmp h4{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--tx3);margin-bottom:8px}
-.cmp.bad h4{color:var(--red)}.cmp.good h4{color:var(--green)}
-.cmp p{font-size:14px;color:var(--tx2);line-height:1.5}
-.foot{text-align:center;margin-top:34px;color:var(--tx2);font-size:15px}
+.fixbtn{font-family:var(--sans);font-size:14px;font-weight:500;padding:11px 18px;border-radius:9px;border:1px solid var(--line2);background:transparent;color:var(--tx);cursor:pointer;transition:border-color .2s}
+.fixbtn:hover{border-color:rgba(255,255,255,.25)}
+.status{font-family:var(--mono);font-size:12px;color:var(--tx3)}
+.rows{display:none;flex-direction:column;gap:8px;margin-bottom:14px}
+.rows.show{display:flex}
+.vrow{display:flex;align-items:center;gap:12px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 16px;font-family:var(--mono);font-size:12.5px}
+.vrow .f{color:var(--tx);min-width:120px}
+.vrow .pill{display:inline-flex;align-items:center;gap:5px;font-size:10.5px;letter-spacing:.04em;text-transform:uppercase;padding:3px 9px;border-radius:20px;white-space:nowrap}
+.vrow .pill::before{content:"";width:5px;height:5px;border-radius:50%;background:currentColor}
+.pill.pass{background:rgba(90,167,117,.1);color:var(--green);border:1px solid rgba(90,167,117,.25)}
+.pill.fail{background:rgba(200,89,93,.1);color:var(--red);border:1px solid rgba(200,89,93,.3)}
+.pill.crash{background:rgba(107,114,128,.14);color:#9aa3b2;border:1px solid rgba(107,114,128,.3)}
+.vrow .d{color:var(--tx3);font-size:11.5px;flex:1;line-height:1.5}
+.summary{display:none;border-radius:12px;padding:16px 20px;border:1px solid var(--line);margin-bottom:14px;font-size:14.5px}
+.summary.show{display:block}
+.summary.bad{border-color:rgba(200,89,93,.4);background:rgba(200,89,93,.07)}
+.summary.good{border-color:rgba(90,167,117,.4);background:rgba(90,167,117,.07)}
+.summary b{font-weight:600}
+.summary .note{color:var(--tx2);font-size:13px;margin-top:6px}
+.term{display:none;background:#101012;border:1px solid var(--line2);border-radius:12px;padding:16px 18px;font-family:var(--mono);font-size:11.5px;line-height:1.8;color:var(--tx2);white-space:pre-wrap;overflow-x:auto;margin-bottom:14px}
+.term.show{display:block}
+.errbox{display:none;border:1px solid rgba(200,89,93,.4);background:rgba(200,89,93,.07);border-radius:12px;padding:14px 18px;font-size:13.5px;color:var(--tx2);margin-bottom:14px}
+.errbox.show{display:block}
+.foot{text-align:center;margin-top:30px;color:var(--tx2);font-size:15px}
 .foot a{color:var(--indigo);border-bottom:1px solid transparent;transition:border-color .2s}.foot a:hover{border-color:var(--indigo)}
-.foot .mono{font-family:var(--mono);font-size:13px;color:var(--tx3);display:block;margin-top:14px}
+.foot .mono{font-family:var(--mono);font-size:13px;color:var(--tx3);display:block;margin-top:12px}
+@media(max-width:640px){.vrow{flex-wrap:wrap}.vrow .d{flex-basis:100%}}
 </style>
 </head>
 <body>
 <div class="wrap">
   <a class="logo" href="/"><span class="dot"></span>faultline</a>
-  <div class="eyebrow">Live demo · no install</div>
-  <h1>Watch it catch a silent failure.</h1>
-  <p class="sub">Inject a broken tool response, run a tiny AI agent, and see faultline catch the moment it confidently does the wrong thing.</p>
+  <div class="eyebrow">Live demo - the real engine, no install</div>
+  <h1>Break a real agent. Watch the real catch.</h1>
+  <p class="sub">This is the actual faultline engine running in your browser via WebAssembly - not an animation. Edit the agent's Python, break its tools, and get real verdicts.</p>
+
+  <div class="engine"><span class="ed" id="edot"></span><span id="etext"><b>Engine:</b> loads on first run (~6 MB, one time) - the same code as <span style="font-family:var(--mono);font-size:12.5px">pip install faultline</span></span></div>
 
   <div class="scenario">
-    <b>Scenario:</b> an agent keeps a warehouse stocked at <b>250 units</b>. It reads the current count, then orders the difference. The true count right now is <b>240</b> — so the correct order is <b>10</b>.
-    <div class="tools">tools: <span>get_inventory()</span> → <span>place_order(qty)</span></div>
+    <b>Scenario:</b> this agent keeps a warehouse stocked at <b>250 units</b>. True count: <b>240</b>, so the correct order is <b>10</b>. faultline will break <span style="font-family:var(--mono);font-size:13px;color:var(--indigo)">get_inventory()</span> three ways - a bent number, an empty response, a truncated payload - and judge what the agent does. Actions are stubbed: no real order can ever fire.
   </div>
+
+  <div class="lbl">The agent (editable Python - this exact code runs)</div>
+  <div class="edwrap"><textarea id="code" spellcheck="false"></textarea></div>
 
   <div class="controls">
-    <div class="fault-pick">
-      <div class="lbl">1 · break a tool (faultline injects this)</div>
-      <div class="chips" id="chips">
-        <button class="chip on" data-k="none">no fault</button>
-        <button class="chip" data-k="wrong">WrongNumber</button>
-        <button class="chip" data-k="stale">StaleData</button>
-        <button class="chip" data-k="truncate">Truncate</button>
-        <button class="chip" data-k="null">NullResponse</button>
-      </div>
-    </div>
-    <button class="run" id="run">Run the agent →</button>
+    <button class="run" id="run">Run faultline</button>
+    <button class="fixbtn" id="fix" style="display:none">Apply the fix</button>
+    <span class="status" id="status"></span>
   </div>
 
-  <div class="term">
-    <div class="term-bar"><i></i><i></i><i></i><span class="t">faultline run · inventory-agent</span></div>
-    <div class="term-body" id="out"></div>
-  </div>
-
-  <div class="verdict" id="verdict"></div>
-  <div class="compare" id="compare">
-    <div class="cmp bad"><h4>Without faultline</h4><p id="cmpBad"></p></div>
-    <div class="cmp good"><h4>With faultline</h4><p id="cmpGood"></p></div>
-  </div>
+  <div class="errbox" id="errbox"></div>
+  <div class="summary" id="summary"></div>
+  <div class="rows" id="rows"></div>
+  <div class="term" id="term"></div>
 
   <div class="foot">
-    This runs entirely in your browser — the real tool does the same thing, deterministically, in your CI.
-    <a href="https://github.com/aaravanmay/faultline">Get it on GitHub →</a>
-    <span class="mono">no LLM judge — same input, same verdict, every run</span>
+    Ready for your own agent? <a href="https://github.com/aaravanmay/faultline">pip install faultline</a>
+    <span class="mono">no LLM judge - same input, same verdict, every run</span>
   </div>
 </div>
 
 <script>
-const REAL=240, TARGET=250, UNIT=42; // $42/unit
-const FAULTS={
-  none:{reading:240, fault:null, note:'the tool returns the true count'},
-  wrong:{reading:48, fault:'WrongNumber', note:'WrongNumber bends the value by 5×'},
-  stale:{reading:12, fault:'StaleData', note:'StaleData returns an old snapshot'},
-  truncate:{reading:3, fault:'Truncate', note:'Truncate drops most of the response'},
-  null:{reading:0, fault:'NullResponse', note:'NullResponse returns nothing'}
-};
-let pick='none', running=false;
-const out=document.getElementById('out'), verdict=document.getElementById('verdict'),
-      compare=document.getElementById('compare'), runBtn=document.getElementById('run');
-document.querySelectorAll('.chip').forEach(c=>c.addEventListener('click',()=>{
-  if(running)return; document.querySelectorAll('.chip').forEach(x=>x.classList.remove('on'));
-  c.classList.add('on'); pick=c.dataset.k;
-}));
-function line(html,cls){const d=document.createElement('div');d.className='ln '+(cls||'');d.innerHTML=html;out.appendChild(d);return d;}
-const wait=ms=>new Promise(r=>setTimeout(r,ms));
-async function show(d){await wait(40);d.classList.add('in');}
-runBtn.addEventListener('click',async()=>{
-  if(running)return; running=true; runBtn.disabled=true;
-  out.innerHTML=''; verdict.className='verdict'; verdict.innerHTML=''; compare.classList.remove('in');
-  const f=FAULTS[pick], reading=f.reading, order=Math.max(0,TARGET-reading), correct=TARGET-REAL;
-  const isWrong = f.fault!==null && order!==correct;
+const VULN = `import faultline as fl
 
-  await show(line('<span class="dim">$</span> agent.run(<span class="key">"restock to 250"</span>)'));
-  await wait(520);
-  if(f.fault){ await show(line('<span class="dim">faultline</span> arming <span class="bad">'+f.fault+'</span> on get_inventory() <span class="dim"># '+f.note+'</span>')); await wait(620); }
-  await show(line('<span class="dim">tool</span> get_inventory() <span class="ok">→ 200 OK</span>'));
-  await wait(480);
-  await show(line('<span class="dim">  returned</span> { units: <span class="'+(f.fault?'bad':'tx')+'">'+reading+'</span> }'+(f.fault?'  <span class="dim"># real: 240</span>':'')));
-  await wait(620);
-  await show(line('<span class="dim">agent</span> computes order = 250 − '+reading+' = <span class="'+(isWrong?'bad':'tx')+'">'+order+'</span>'));
-  await wait(560);
-  await show(line('<span class="dim">agent</span> place_order(units=<span class="'+(isWrong?'bad':'tx')+'">'+order+'</span>) <span class="dim"># no error, no hesitation</span>'));
-  await wait(700);
-  await show(line('<span class="'+(f.fault?'tx':'ok')+'">✓ run completed — exit 0</span>'));
-  await wait(500);
+@fl.tool
+def get_inventory(sku):
+    return {"sku": sku, "units": 240}      # true count: 240
 
-  verdict.classList.add(isWrong?'fail':'pass');
-  if(isWrong){
-    verdict.innerHTML='<div class="v"><span class="d"></span>SILENT-WRONG — caught</div>'+
-      '<p>The agent placed an order for <b>'+order+' units</b> built on a corrupted reading. '+
-      'The correct order was <b>'+correct+'</b>. No exception was raised — your tests would have passed. '+
-      'faultline flagged it because the action diverged from the un-faulted baseline.</p>';
-    document.getElementById('cmpBad').innerHTML='Orders <b>'+order+'</b> units — '+(order-correct)+' too many. ≈ <b>$'+((order-correct)*UNIT).toLocaleString()+'</b> wasted, silently.';
-    document.getElementById('cmpGood').innerHTML='Blocked before the order fired. The build fails in CI; nobody ships the bug.';
-  } else if(f.fault){
-    verdict.innerHTML='<div class="v"><span class="d"></span>PASS — resilient</div>'+
-      '<p>The agent handled the '+f.fault+' correctly (or it didn\'t change the order). faultline confirms it stayed correct — and won\'t cry wolf.</p>';
-    document.getElementById('cmpBad').innerHTML='Ships the correct order — this fault happened to be harmless here.';
-    document.getElementById('cmpGood').innerHTML='Confirmed safe, deterministically. No false alarm.';
-  } else {
-    verdict.innerHTML='<div class="v"><span class="d"></span>PASS — baseline correct</div>'+
-      '<p>No fault injected. The agent ordered <b>10</b> units — exactly right. Now pick a fault above and run it again.</p>';
-    document.getElementById('cmpBad').innerHTML='Correct order — nothing wrong yet. Try breaking a tool.';
-    document.getElementById('cmpGood').innerHTML='Baseline established — this is what "correct" looks like.';
+orders = []
+def _place_order(sku, qty):
+    orders.append((sku, qty)); return "ok"
+place_order = fl.wrap(_place_order, is_action=True)
+
+def agent(task):
+    units = get_inventory("A-12")["units"]
+    qty = max(0, 250 - units)              # restock to 250
+    if qty > 0:
+        place_order("A-12", qty)
+    return {"ordered": qty}`;
+
+const FIXED = `import faultline as fl
+
+@fl.tool
+def get_inventory(sku):
+    return {"sku": sku, "units": 240}      # true count: 240
+
+orders = []
+def _place_order(sku, qty):
+    orders.append((sku, qty)); return "ok"
+place_order = fl.wrap(_place_order, is_action=True)
+
+def agent(task):
+    data = get_inventory("A-12")
+    if not data or "units" not in data:    # no data -> abstain, don't guess
+        return {"ordered": 0, "flagged": "no inventory data - refusing to order"}
+    units = data["units"]
+    if not (0 <= units <= 500):            # implausible -> refuse to act
+        return {"ordered": 0, "flagged": "implausible reading - refusing"}
+    qty = max(0, 250 - units)
+    if qty > 50:                           # sanity cap: never order more than 50
+        return {"ordered": 0, "flagged": "order of %d exceeds the 50-unit cap - refusing" % qty}
+    if qty > 0:
+        place_order("A-12", qty)
+    return {"ordered": qty}`;
+
+const ed = document.getElementById('code');
+ed.value = VULN;
+const $ = id => document.getElementById(id);
+let pyodide = null, engineReady = false, running = false;
+
+function setStatus(t){ $('status').textContent = t; }
+function engineState(on, text){ $('edot').className = 'ed' + (on ? ' on' : ''); if(text) $('etext').innerHTML = text; }
+
+async function ensureEngine(){
+  if(engineReady) return;
+  setStatus('loading the engine (one time, ~6 MB)...');
+  const mod = await import('https://cdn.jsdelivr.net/pyodide/v0.26.2/full/pyodide.mjs');
+  pyodide = await mod.loadPyodide({ indexURL: 'https://cdn.jsdelivr.net/pyodide/v0.26.2/full/' });
+  setStatus('loading faultline source...');
+  const files = ["__init__.py","_result.py","adapters.py","attest.py","cli.py","detect.py","faults.py","fix.py","fuzz.py","guard.py","invariants.py","legacy.py","llm.py","mine.py","probe.py","replay.py","report.py","runner.py","scenarios.py","trace.py"];
+  try{ pyodide.FS.mkdir('faultline'); }catch(e){}
+  for(const f of files){
+    const r = await fetch('assets/py/faultline/' + f);
+    if(!r.ok) throw new Error('could not fetch ' + f);
+    pyodide.FS.writeFile('faultline/' + f, await r.text());
   }
-  await show(verdict); compare.classList.add('in');
-  running=false; runBtn.disabled=false;
-});
+  await pyodide.runPythonAsync("import sys\nsys.path.insert(0, '.')\nimport faultline");
+  engineReady = true;
+  const v = await pyodide.runPythonAsync("import faultline; faultline.__version__");
+  engineState(true, '<b>Engine live:</b> real faultline v' + v + ' in WebAssembly - the same code as <span style="font-family:var(--mono);font-size:12.5px">pip install faultline</span>');
+}
+
+const RUNNER = `
+def _flrun():
+    import json, io, contextlib, traceback
+    try:
+        ns = {}
+        exec(USER_CODE, ns)
+        import faultline as fl
+        agent = ns.get("agent")
+        if not callable(agent):
+            return json.dumps({"ok": False, "error": "your code must define a function called agent(task)"})
+        faults = [fl.WrongNumber(factor=0.2, targets=["get_inventory"]),
+                  fl.NullResponse(targets=["get_inventory"]),
+                  fl.Truncate(targets=["get_inventory"])]
+        res = fl.check(agent, {}, faults, invariants=[], trials=3)
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            res.report()
+        rows = [{"fault": r["fault"], "verdict": r["verdict"], "detail": (r.get("detail") or "")} for r in res.rows]
+        handled = sum(1 for r in res.rows if r["verdict"] == "PASS")
+        return json.dumps({"ok": True, "rows": rows, "handled": handled, "total": len(res.rows),
+                           "report": buf.getvalue(), "orders": ns.get("orders", [])})
+    except Exception as e:
+        return json.dumps({"ok": False, "error": "%s: %s" % (type(e).__name__, e),
+                           "trace": traceback.format_exc()[-600:]})
+_flrun()
+`;
+
+async function runCheck(){
+  if(running) return;
+  running = true; $('run').disabled = true;
+  $('errbox').className = 'errbox'; $('summary').className = 'summary'; $('rows').className = 'rows'; $('term').className = 'term';
+  try{
+    await ensureEngine();
+    setStatus('running the real check (3 faults x 3 trials)...');
+    pyodide.globals.set('USER_CODE', ed.value);
+    const out = JSON.parse(await pyodide.runPythonAsync(RUNNER));
+    setStatus('');
+    if(!out.ok){
+      $('errbox').textContent = 'Your code raised: ' + out.error;
+      $('errbox').className = 'errbox show';
+      return;
+    }
+    const rows = $('rows'); rows.innerHTML = '';
+    for(const r of out.rows){
+      const cls = r.verdict === 'PASS' ? 'pass' : (r.verdict === 'CRASH' ? 'crash' : 'fail');
+      const label = r.verdict === 'FAIL' ? 'silent-wrong' : r.verdict.toLowerCase();
+      rows.innerHTML += '<div class="vrow"><span class="f">' + r.fault + '</span><span class="pill ' + cls + '">' + label + '</span><span class="d">' + (r.detail || '') + '</span></div>';
+    }
+    rows.className = 'rows show';
+    const s = $('summary');
+    if(out.handled === out.total){
+      s.className = 'summary good show';
+      s.innerHTML = '<b>' + out.handled + '/' + out.total + ' faults handled - this agent is resilient.</b><div class="note">Same input, same verdict, every run. That is the whole point: deterministic, CI-gateable, no LLM judge. Real side-effects fired during testing: none (actions are stubbed).</div>';
+      $('fix').style.display = 'none';
+    } else {
+      s.className = 'summary bad show';
+      s.innerHTML = '<b>' + (out.total - out.handled) + ' of ' + out.total + ' faults NOT handled' + (out.rows.some(r => r.verdict === 'FAIL') ? ' - including a silent failure, the dangerous kind.' : '.') + '</b><div class="note">The agent acted on corrupted data with no error raised - your tests would have passed. Click "Apply the fix" to harden the agent (a data guard plus a sanity cap), then run again and watch it go green. Or edit the code yourself.</div>';
+      $('fix').style.display = '';
+    }
+    $('term').textContent = out.report;
+    $('term').className = 'term show';
+  }catch(e){
+    setStatus('');
+    $('errbox').innerHTML = 'The engine could not load (network/CDN blocked?). The same demo runs locally in one minute: <span style="font-family:var(--mono)">pip install faultline && faultline demo</span> - or see <a style="color:var(--indigo)" href="https://github.com/aaravanmay/faultline">GitHub</a>.';
+    $('errbox').className = 'errbox show';
+  }finally{
+    running = false; $('run').disabled = false;
+  }
+}
+$('run').addEventListener('click', runCheck);
+$('fix').addEventListener('click', () => { ed.value = FIXED; $('fix').style.display = 'none'; setStatus('fix applied - run faultline again'); });
 </script>
 </body>
 </html>
