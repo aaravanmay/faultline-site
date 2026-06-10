@@ -149,11 +149,14 @@ section{position:relative;z-index:2;padding:120px 0}
 .icode .cbtn{position:absolute;top:8px;right:8px;font-family:var(--mono);font-size:10px;color:var(--tx-3);background:var(--surface);border:1px solid var(--line-2);border-radius:6px;padding:4px 8px;cursor:pointer;transition:color .2s}
 .icode .cbtn:hover{color:var(--indigo)}
 .icode .c1{color:var(--tx-3)}.icode .c2{color:var(--indigo)}.icode .c3{color:var(--green)}
-/* auth modal */
-.auth-overlay{position:fixed;inset:0;z-index:300;display:flex;align-items:center;justify-content:center;padding:20px;background:rgba(10,10,12,.65);backdrop-filter:blur(8px);opacity:0;pointer-events:none;transition:opacity .25s var(--ease)}
-.auth-overlay.show{opacity:1;pointer-events:auto}
-.auth-modal{position:relative;width:100%;max-width:404px;background:var(--surface);border:1px solid var(--line-2);border-radius:14px;padding:30px 30px 24px;box-shadow:0 30px 80px rgba(0,0,0,.55);transform:translateY(10px) scale(.98);transition:transform .3s var(--ease)}
-.auth-overlay.show .auth-modal{transform:none}
+/* auth modal — display:none until opened, so password managers don't
+   offer autofill on page load (fields must not exist visibly until then) */
+.auth-overlay{position:fixed;inset:0;z-index:300;display:none;align-items:center;justify-content:center;padding:20px;background:rgba(10,10,12,.65);backdrop-filter:blur(8px)}
+.auth-overlay.show{display:flex;animation:authFade .25s var(--ease)}
+.auth-modal{position:relative;width:100%;max-width:404px;background:var(--surface);border:1px solid var(--line-2);border-radius:14px;padding:30px 30px 24px;box-shadow:0 30px 80px rgba(0,0,0,.55)}
+.auth-overlay.show .auth-modal{animation:authPop .3s var(--ease)}
+@keyframes authFade{from{opacity:0}to{opacity:1}}
+@keyframes authPop{from{transform:translateY(10px) scale(.98)}to{transform:none}}
 .auth-close{position:absolute;top:14px;right:15px;border:0;background:none;font-size:24px;line-height:1;color:var(--tx-3);cursor:pointer;padding:4px}
 .auth-close:hover{color:var(--tx)}
 .auth-logo{display:flex;align-items:center;gap:9px;font-weight:600;font-size:16px;letter-spacing:-.01em;margin-bottom:16px}
