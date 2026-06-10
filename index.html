@@ -149,6 +149,35 @@ section{position:relative;z-index:2;padding:120px 0}
 .icode .cbtn{position:absolute;top:8px;right:8px;font-family:var(--mono);font-size:10px;color:var(--tx-3);background:var(--surface);border:1px solid var(--line-2);border-radius:6px;padding:4px 8px;cursor:pointer;transition:color .2s}
 .icode .cbtn:hover{color:var(--indigo)}
 .icode .c1{color:var(--tx-3)}.icode .c2{color:var(--indigo)}.icode .c3{color:var(--green)}
+/* auth modal */
+.auth-overlay{position:fixed;inset:0;z-index:300;display:flex;align-items:center;justify-content:center;padding:20px;background:rgba(10,10,12,.65);backdrop-filter:blur(8px);opacity:0;pointer-events:none;transition:opacity .25s var(--ease)}
+.auth-overlay.show{opacity:1;pointer-events:auto}
+.auth-modal{position:relative;width:100%;max-width:404px;background:var(--surface);border:1px solid var(--line-2);border-radius:14px;padding:30px 30px 24px;box-shadow:0 30px 80px rgba(0,0,0,.55);transform:translateY(10px) scale(.98);transition:transform .3s var(--ease)}
+.auth-overlay.show .auth-modal{transform:none}
+.auth-close{position:absolute;top:14px;right:15px;border:0;background:none;font-size:24px;line-height:1;color:var(--tx-3);cursor:pointer;padding:4px}
+.auth-close:hover{color:var(--tx)}
+.auth-logo{display:flex;align-items:center;gap:9px;font-weight:600;font-size:16px;letter-spacing:-.01em;margin-bottom:16px}
+.auth-logo .dot{width:9px;height:9px;border-radius:50%;background:var(--indigo2,#5e6ad2);box-shadow:0 0 0 4px rgba(94,106,210,.16)}
+.auth-title{font-size:24px;font-weight:600;letter-spacing:-.02em;margin-bottom:4px}
+.auth-sub{color:var(--tx-2);font-size:14px;margin-bottom:20px}
+.auth-oauth{width:100%;display:flex;align-items:center;justify-content:center;gap:9px;padding:11px;border:1px solid var(--line-2);border-radius:9px;background:transparent;font-family:var(--sans);font-size:14.5px;font-weight:500;color:var(--tx);cursor:pointer;transition:border-color .2s,background .2s}
+.auth-oauth:hover{border-color:rgba(255,255,255,.25);background:rgba(255,255,255,.03)}
+.auth-divider{display:flex;align-items:center;gap:12px;margin:16px 0;color:var(--tx-3);font-size:12px}
+.auth-divider::before,.auth-divider::after{content:"";flex:1;height:1px;background:var(--line)}
+#authForm{display:flex;flex-direction:column;gap:10px}
+#authForm input{width:100%;padding:11px 13px;border:1px solid var(--line-2);border-radius:9px;font-family:var(--sans);font-size:14.5px;color:var(--tx);background:#101012;transition:border-color .2s,box-shadow .2s}
+#authForm input:focus{outline:none;border-color:var(--indigo);box-shadow:0 0 0 3px rgba(94,106,210,.14)}
+#authForm .btn.btn-primary{justify-content:center;margin-top:4px;padding:12px;width:100%;border:0;cursor:pointer;font-family:var(--sans);font-size:14.5px}
+.auth-msg{font-size:13px;line-height:1.45;color:var(--tx-2)}
+.auth-msg:empty{display:none}
+.auth-msg.err{color:var(--red)}
+.auth-msg.ok{color:var(--green)}
+.auth-msg.warn{color:#d9b88a}
+.auth-magic{width:100%;margin-top:12px;border:0;background:none;color:var(--indigo);font-family:var(--sans);font-size:13.5px;cursor:pointer}
+.auth-magic:hover{text-decoration:underline}
+.auth-switch{margin-top:16px;text-align:center;font-size:13.5px;color:var(--tx-3)}
+.auth-switch a{color:var(--indigo);cursor:pointer;font-weight:500}
+.auth-switch a:hover{text-decoration:underline}
 .cta{text-align:center;padding:140px 0;position:relative}
 .cta .crystal{position:absolute;top:-20px;left:50%;transform:translateX(-50%);width:180px;opacity:.45;z-index:1;will-change:transform}
 .cta h2{font-size:clamp(32px,4.4vw,52px);letter-spacing:-.035em;font-weight:600;line-height:1.08;position:relative;z-index:2}
@@ -203,7 +232,7 @@ body.rmotion .htrack{overflow-x:auto;transform:none!important;scroll-snap-type:x
 <nav id="nav"><div class="nav-in">
   <a class="logo" href="#"><span class="dot"></span>faultline</a>
   <div class="nav-links"><a href="#how">How it works</a><a href="#proof">Benchmark</a><a href="#product">Product</a><a href="https://github.com/aaravanmay/faultline">GitHub</a></div>
-  <div class="nav-right"><a class="signin" href="/app/overview.html">Sign in</a><a class="btn btn-primary" href="/app/overview.html">Start free</a></div>
+  <div class="nav-right"><a class="signin" data-auth="signin" href="#signin">Sign in</a><a class="btn btn-primary" data-auth="signup" href="#signup">Start free</a></div>
 </div></nav>
 
 <header><div class="wrap"><div class="hero-grid">
@@ -211,7 +240,7 @@ body.rmotion .htrack{overflow-x:auto;transform:none!important;scroll-snap-type:x
     <div class="eyebrow reveal">Deterministic agent testing</div>
     <h1 class="mask"><span class="ml"><i>Your agent doesn't crash.</i></span><span class="ml"><i>It quietly does <span class="accent">the wrong thing.</span></i></span></h1>
     <p class="sub reveal d2">faultline breaks your agent's tools on purpose — wrong numbers, stale data, empty responses — and catches the moment it confidently ships a wrong answer with no error. Deterministically. No LLM judge.</p>
-    <div class="hero-cta reveal d2"><a class="btn btn-primary" href="/app/overview.html">Start free</a><a class="btn btn-ghost" href="/demo.html">See it catch a bug</a></div>
+    <div class="hero-cta reveal d2"><a class="btn btn-primary" data-auth="signup" href="#signup">Start free</a><a class="btn btn-ghost" href="/demo.html">See it catch a bug</a></div>
     <div class="install reveal d3"><span class="pmt">$</span><b>pip install faultline</b><button class="copy" onclick="cp(this)">copy</button></div>
   </div>
   <div class="hero-art"><div class="hero-glow"></div><img id="shard" src="assets/refined/hero-shard.png" alt="faultline" /></div>
@@ -349,7 +378,7 @@ faultline verify faultline.report.json
 <section class="cta"><img class="crystal" data-par="-.1" src="assets/refined/crystal.png" alt=""><div class="wrap">
   <h2 class="mask"><span class="ml"><i>Ship agents you can</i></span><span class="ml"><i>actually trust.</i></span></h2>
   <p class="reveal d1">Open source. Deterministic. Catches the bug your evals miss.</p>
-  <div class="hero-cta reveal d2"><a class="btn btn-primary" href="/app/overview.html">Start free</a><a class="btn btn-ghost" href="https://github.com/aaravanmay/faultline">Star on GitHub</a></div>
+  <div class="hero-cta reveal d2"><a class="btn btn-primary" data-auth="signup" href="#signup">Start free</a><a class="btn btn-ghost" href="https://github.com/aaravanmay/faultline">Star on GitHub</a></div>
 </div></section>
 
 <footer><div class="wrap">
@@ -357,7 +386,7 @@ faultline verify faultline.report.json
     <div class="foot-col foot-brand"><a class="logo" href="#"><span class="dot"></span>faultline</a><p style="color:var(--tx-3)">Deterministic silent-failure testing for AI agents.</p></div>
     <div class="foot-col"><h4>Product</h4><a href="#how">How it works</a><a href="#proof">Benchmark</a><a href="/app/overview.html">Dashboard</a></div>
     <div class="foot-col"><h4>Developers</h4><a href="https://github.com/aaravanmay/faultline">GitHub</a><a href="https://github.com/aaravanmay/faultline/blob/main/benchmark/MEASUREMENT.md">Benchmark</a><a href="https://github.com/aaravanmay/faultline/blob/main/README.md">Docs</a></div>
-    <div class="foot-col"><h4>Company</h4><a href="/app/overview.html">Sign in</a><a href="https://github.com/aaravanmay/faultline/releases">Changelog</a></div>
+    <div class="foot-col"><h4>Company</h4><a data-auth="signin" href="#signin">Sign in</a><a href="https://github.com/aaravanmay/faultline/releases">Changelog</a></div>
   </div>
   <div class="foot-bottom"><span>© 2026 faultline</span><span class="mono">no LLM judges were used in the making of this verdict</span></div>
 </div></footer>
@@ -428,5 +457,29 @@ if(!rm){
   dotFrame();
 }
 </script>
+<div class="auth-overlay" id="authOverlay" aria-hidden="true">
+  <div class="auth-modal" id="authModal" role="dialog" aria-modal="true" aria-labelledby="authTitle">
+    <button class="auth-close" id="authClose" aria-label="Close">&times;</button>
+    <div class="auth-logo"><span class="dot"></span>faultline</div>
+    <h3 class="auth-title" id="authTitle">Welcome back</h3>
+    <p class="auth-sub" id="authSub">Sign in to your faultline workspace.</p>
+    <button class="auth-oauth" data-provider="github" type="button">
+      <svg width="17" height="17" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+      Continue with GitHub
+    </button>
+    <div class="auth-divider"><span>or</span></div>
+    <form id="authForm">
+      <input type="email" id="authEmail" placeholder="you@company.com" autocomplete="email" required>
+      <input type="password" id="authPassword" placeholder="Password" autocomplete="current-password">
+      <div class="auth-msg" id="authMsg"></div>
+      <button type="submit" class="btn btn-primary" id="authSubmit">Sign in</button>
+    </form>
+    <button class="auth-magic" id="authMagic" type="button">Email me a magic link instead</button>
+    <div class="auth-switch"><span id="authSwitchText">New to faultline?</span> <a id="authSwitch">Create an account</a></div>
+  </div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="/supabase-config.js"></script>
+<script src="/auth.js"></script>
 </body>
 </html>
