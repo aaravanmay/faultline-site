@@ -136,6 +136,21 @@ section{position:relative;z-index:2;padding:120px 0}
 .rung h3{font-size:18px;font-weight:600;margin-top:14px;letter-spacing:-.01em}
 .rung p{color:var(--tx-2);font-size:14.5px;margin-top:8px;line-height:1.55}
 
+/* where-this-sits */
+.fitgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:50px}
+@media(max-width:860px){.fitgrid{grid-template-columns:1fr}}
+.fitcard{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:24px;display:flex;flex-direction:column;gap:10px}
+.fitcard.us{border-color:rgba(94,106,210,.45);background:linear-gradient(180deg,rgba(94,106,210,.08),var(--surface))}
+.fitcard .fq{font-family:var(--mono);font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--tx-3)}
+.fitcard.us .fq{color:var(--indigo)}
+.fitcard h3{font-size:17px;font-weight:600;letter-spacing:-.01em;line-height:1.3}
+.fitcard p{color:var(--tx-2);font-size:13.5px;line-height:1.55;flex:1}
+.fitcard .ftools{font-family:var(--mono);font-size:11.5px;color:var(--tx-3);border-top:1px solid var(--line);padding-top:12px;line-height:1.8}
+.fitcard.us .ftools{color:var(--indigo)}
+.pipeflow{margin-top:26px;background:#101012;border:1px solid var(--line);border-radius:12px;padding:18px 22px;font-family:var(--mono);font-size:12.5px;color:var(--tx-2);display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:center}
+.pipeflow .st{padding:6px 12px;border:1px solid var(--line-2);border-radius:7px;white-space:nowrap}
+.pipeflow .st.hl{border-color:rgba(94,106,210,.5);color:var(--indigo);background:rgba(94,106,210,.08)}
+.pipeflow .ar{color:var(--tx-3)}
 /* integrate-in-minutes */
 .igrid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:50px}
 @media(max-width:860px){.igrid{grid-template-columns:1fr}}
@@ -352,6 +367,35 @@ body.rmotion .htrack{overflow-x:auto;transform:none!important;scroll-snap-type:x
   </div>
   <p class="foot reveal">Self-authored, independently audited, zero labels overturned. <a href="https://github.com/aaravanmay/faultline/blob/main/benchmark/MEASUREMENT.md">Run it yourself →</a></p>
   <p class="foot reveal" style="margin-top:14px;font-size:13px;color:var(--tx-3)">Benchmark agents are deterministic Python. Separately, faultline has been demonstrated catching a silent-wrong on a real Claude tool-calling agent — one scenario, not a rate. <a href="https://github.com/aaravanmay/faultline/blob/main/examples/PROVE_IT_YOURSELF.md">Reproduce it in 5 minutes →</a></p>
+</div></section>
+
+<section id="fit"><div class="wrap">
+  <div class="sec-head"><div class="eyebrow reveal">Where this sits</div>
+    <h2 class="rise"><span>Not another eval platform.</span></h2>
+    <p class="reveal d1">Evals, observability and faultline answer three different questions. Most teams shipping serious agents will end up wanting all three — faultline is built to sit beside your existing stack, not replace it.</p></div>
+  <div class="fitgrid">
+    <div class="fitcard reveal"><span class="fq">Question 1 · quality</span>
+      <h3>"Is the answer good?"</h3>
+      <p>Eval platforms score outputs against datasets and rubrics — prompt regressions, answer quality, A/B-ing models. Usually judged by an LLM, which is the right tool for subjective quality.</p>
+      <div class="ftools">LangSmith · Braintrust · DeepEval · promptfoo</div></div>
+    <div class="fitcard reveal d1"><span class="fq">Question 2 · visibility</span>
+      <h3>"What happened in prod?"</h3>
+      <p>Observability traces every call your agent made in production — latency, cost, token usage, full request trees. Essential once you've shipped; it explains failures after they happen.</p>
+      <div class="ftools">Langfuse · Arize Phoenix · OpenInference · Datadog</div></div>
+    <div class="fitcard us reveal d2"><span class="fq">Question 3 · behavior under failure</span>
+      <h3>"What does it DO when its tools lie?"</h3>
+      <p>faultline corrupts your agent's tool data on purpose — wrong numbers, stale or empty responses — and deterministically catches the agent silently acting on it. No LLM judge, no flaky verdicts: a CI gate and a runtime seatbelt for the failure the other two layers aren't built to catch.</p>
+      <div class="ftools">faultline — free, open source</div></div>
+  </div>
+  <div class="pipeflow reveal">
+    <span class="st">commit</span><span class="ar">→</span>
+    <span class="st">unit tests</span><span class="ar">→</span>
+    <span class="st">evals · quality gate</span><span class="ar">→</span>
+    <span class="st hl">faultline · silent-failure gate</span><span class="ar">→</span>
+    <span class="st">deploy</span><span class="ar">→</span>
+    <span class="st">observability</span><span class="ar">+</span>
+    <span class="st hl">faultline guard · runtime</span>
+  </div>
 </div></section>
 
 <section id="rungs"><div class="wrap">
