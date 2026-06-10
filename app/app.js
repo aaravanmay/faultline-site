@@ -85,6 +85,9 @@
 
   // ── context + gate ─────────────────────────────────────────────────────────
   async function loadContext(){
+    // Activate any pending team invites for this email (no-op until
+    // migration_team.sql is applied; errors are deliberately swallowed).
+    try{ await sb.rpc("accept_pending_invites"); }catch(e){}
     var m=await sb.from("org_members").select("org_id, role, organizations(id,name,slug)").order("added_at");
     ctx.orgs=(m.data||[]).map(function(x){ return { id:x.org_id, role:x.role, name:x.organizations&&x.organizations.name, slug:x.organizations&&x.organizations.slug }; });
     ctx.orgId=ctx.orgs[0]&&ctx.orgs[0].id||null;

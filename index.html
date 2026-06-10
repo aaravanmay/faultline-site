@@ -136,6 +136,19 @@ section{position:relative;z-index:2;padding:120px 0}
 .rung h3{font-size:18px;font-weight:600;margin-top:14px;letter-spacing:-.01em}
 .rung p{color:var(--tx-2);font-size:14.5px;margin-top:8px;line-height:1.55}
 
+/* integrate-in-minutes */
+.igrid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:50px}
+@media(max-width:860px){.igrid{grid-template-columns:1fr}}
+.icard{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:22px;display:flex;flex-direction:column;transition:border-color .3s}
+.icard:hover{border-color:var(--line-2)}
+.icard .iwhere{font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--indigo)}
+.icard h3{font-size:17px;font-weight:600;margin-top:10px;letter-spacing:-.01em}
+.icard .idesc{color:var(--tx-2);font-size:13.5px;margin-top:6px;line-height:1.5}
+.icode{position:relative;background:#101012;border:1px solid var(--line);border-radius:9px;margin-top:14px;flex:1}
+.icode pre{font-family:var(--mono);font-size:12px;line-height:1.75;color:var(--tx-2);padding:14px;overflow-x:auto;margin:0}
+.icode .cbtn{position:absolute;top:8px;right:8px;font-family:var(--mono);font-size:10px;color:var(--tx-3);background:var(--surface);border:1px solid var(--line-2);border-radius:6px;padding:4px 8px;cursor:pointer;transition:color .2s}
+.icode .cbtn:hover{color:var(--indigo)}
+.icode .c1{color:var(--tx-3)}.icode .c2{color:var(--indigo)}.icode .c3{color:var(--green)}
 .cta{text-align:center;padding:140px 0;position:relative}
 .cta .crystal{position:absolute;top:-20px;left:50%;transform:translateX(-50%);width:180px;opacity:.45;z-index:1;will-change:transform}
 .cta h2{font-size:clamp(32px,4.4vw,52px);letter-spacing:-.035em;font-weight:600;line-height:1.08;position:relative;z-index:2}
@@ -291,6 +304,7 @@ body.rmotion .htrack{overflow-x:auto;transform:none!important;scroll-snap-type:x
     <div class="stat reveal d3"><div class="num"><span>0</span></div><div class="cap">LLM judges</div></div>
   </div>
   <p class="foot reveal">Self-authored, independently audited, zero labels overturned. <a href="https://github.com/aaravanmay/faultline/blob/main/benchmark/MEASUREMENT.md">Run it yourself →</a></p>
+  <p class="foot reveal" style="margin-top:14px;font-size:13px;color:var(--tx-3)">Benchmark agents are deterministic Python. Separately, faultline has been demonstrated catching a silent-wrong on a real Claude tool-calling agent — one scenario, not a rate. <a href="https://github.com/aaravanmay/faultline/blob/main/examples/PROVE_IT_YOURSELF.md">Reproduce it in 5 minutes →</a></p>
 </div></section>
 
 <section id="rungs"><div class="wrap">
@@ -303,6 +317,32 @@ body.rmotion .htrack{overflow-x:auto;transform:none!important;scroll-snap-type:x
       <div class="rung reveal d1"><div class="n"></div><span class="tag">Runtime</span><h3>Runtime guard</h3><p>The same checks, live. A seatbelt that blocks an irreversible action before it fires on rule-breaking data.</p></div>
       <div class="rung reveal d2"><div class="n"></div><span class="tag">Evidence</span><h3>Attestation</h3><p>A tamper-evident report — edit one verdict and the hash breaks. Reproducible evidence an auditor can re-check.</p></div>
     </div>
+  </div>
+</div></section>
+
+<section id="install"><div class="wrap">
+  <div class="sec-head"><div class="eyebrow reveal">Install</div>
+    <h2 class="rise"><span>Integrated in minutes. Permanent in your repo.</span></h2>
+    <p class="reveal d1"><span class="mono" style="font-size:14px;color:var(--tx)">pip install faultline</span> — pure standard library, zero dependencies. Then each rung lives in a different layer of your project.</p></div>
+  <div class="igrid">
+    <div class="icard reveal"><span class="iwhere">In your repo · every PR</span><h3>CI gate — free</h3>
+      <div class="idesc">Commit one workflow file. Every pull request runs faultline and fails the build on a silent failure.</div>
+      <div class="icode"><button class="cbtn" onclick="cpc(this)">copy</button><pre><span class="c1"># .github/workflows/faultline.yml</span>
+- uses: actions/checkout@v4
+- uses: <span class="c2">aaravanmay/faultline@main</span>
+  with:
+    suite: faultline_suite.py</pre></div></div>
+    <div class="icard reveal d1"><span class="iwhere">In your production code</span><h3>Runtime guard</h3>
+      <div class="idesc">Wrap the irreversible action once. In enforce mode a rule-breaking action raises before it fires.</div>
+      <div class="icode"><button class="cbtn" onclick="cpc(this)">copy</button><pre>order = fl.wrap(order, <span class="c2">is_action=True</span>)
+
+with fl.guard([no_oversell], <span class="c2">mode="enforce"</span>):
+    agent.run(task)  <span class="c1"># bad action → blocked</span></pre></div></div>
+    <div class="icard reveal d2"><span class="iwhere">In your release pipeline</span><h3>Attestation</h3>
+      <div class="idesc">Each build writes a tamper-evident verdict file. Anyone can re-verify it — edit one number and the hash breaks.</div>
+      <div class="icode"><button class="cbtn" onclick="cpc(this)">copy</button><pre>faultline attest suite.py
+faultline verify faultline.report.json
+<span class="c3"># verified: 3 verdict(s), hash OK</span></pre></div></div>
   </div>
 </div></section>
 
@@ -324,6 +364,7 @@ body.rmotion .htrack{overflow-x:auto;transform:none!important;scroll-snap-type:x
 
 <script>
 function cp(b){navigator.clipboard&&navigator.clipboard.writeText('pip install faultline');const t=b.textContent;b.textContent='copied';b.style.color='var(--green)';setTimeout(()=>{b.textContent=t;b.style.color=''},1400);}
+function cpc(b){const pre=b.parentElement.querySelector('pre');navigator.clipboard&&navigator.clipboard.writeText(pre.innerText);const t=b.textContent;b.textContent='copied';b.style.color='var(--green)';setTimeout(()=>{b.textContent=t;b.style.color=''},1400);}
 const rm=matchMedia('(prefers-reduced-motion:reduce)').matches;
 const nav=document.getElementById('nav');
 

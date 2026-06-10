@@ -48,7 +48,7 @@ function selectTab(tab){
   try{ history.replaceState(null,'','?tab='+tab); }catch(e){}
   var panel = document.getElementById('panel');
   if(tab==='project'){ panel.innerHTML = renderProject(FL_CTX); }
-  else if(tab==='team'){ panel.innerHTML = renderTeam(FL_CTX); }
+  else if(tab==='team'){ panel.innerHTML = '<div class="skel" style="height:220px"></div>'; loadTeam(); }
   else if(tab==='account'){ panel.innerHTML = renderAccount(FL_CTX); }
   else if(tab==='tokens'){ panel.innerHTML = '<div class="skel" style="height:220px"></div>'; loadTokens(); }
 }
@@ -216,33 +216,111 @@ function showTokenModal(name, full){
 }
 
 /* ── TEAM ──────────────────────────────────────────────────────────── */
-function renderTeam(ctx){
-  var email = (ctx.user && ctx.user.email) || '';
+function myOrgRole(){
+  var o = (FL_CTX.orgs||[]).filter(function(x){ return x.id===FL_CTX.orgId; })[0];
+  return (o && o.role) || 'member';
+}
+function teamNeedsMigration(err){
+  var m = ((err && (err.message||err.hint||err.code)) || '') + '';
+  return m.indexOf('schema cache')>=0 || m.indexOf('PGRST2')>=0 || m.indexOf('does not exist')>=0 || (err && (err.code==='42P01'||err.code==='PGRST202'||err.code==='PGRST205'));
+}
+function roleTag(r){ return '<span class="fault-tag">'+fl.esc(r.charAt(0).toUpperCase()+r.slice(1))+'</span>'; }
+async function loadTeam(){
+  var panel = document.getElementById('panel');
+  if(!FL_CTX.orgId){ panel.innerHTML = '<div class="card hairline"><div class="card-pad muted">No workspace yet — create a project first.</div></div>'; return; }
+  var members = null, invites = null, err = null;
+  try{
+    var r1 = await fl.sb.rpc('org_member_list', { p_org: FL_CTX.orgId });
+    if(r1.error) throw r1.error;
+    members = r1.data || [];
+    var r2 = await fl.sb.from('org_invites').select('id,email,role,created_at')
+      .eq('org_id', FL_CTX.orgId).is('accepted_at', null).order('created_at');
+    if(r2.error) throw r2.error;
+    invites = r2.data || [];
+  }catch(e){ err = e; }
+  if(err){
+    if(teamNeedsMigration(err)){
+      panel.innerHTML = '<div class="card hairline"><div class="card-pad">'+
+        '<div class="agent-nm">Team features need a one-time database update</div>'+
+        '<div class="card-meta" style="margin-top:6px">The workspace owner applies <span class="mono">site/sql/migration_team.sql</span> in the Supabase SQL editor (Run once). This page starts working immediately after.</div>'+
+        '</div></div>';
+    } else {
+      panel.innerHTML = '<div class="card hairline"><div class="card-pad muted">Couldn\'t load the team: '+fl.esc((err.message||'unknown error'))+'</div></div>';
+    }
+    return;
+  }
+  panel.innerHTML = renderTeam(members, invites);
+}
+function renderTeam(members, invites){
+  var me = (FL_CTX.user && FL_CTX.user.id) || null;
+  var isAdmin = myOrgRole()==='owner' || myOrgRole()==='admin';
+  var orgName = ((FL_CTX.orgs||[]).filter(function(x){return x.id===FL_CTX.orgId;})[0]||{}).name || 'this workspace';
+
+  var rows = members.map(function(m){
+    var em = m.email || '(no email)';
+    var canRemove = isAdmin && m.user_id !== me && m.role !== 'owner';
+    return '<tr style="cursor:default"><td><div class="cell-agent">'+
+      '<div class="agent-ic '+fl.agentColor(em)+'">'+fl.esc(em.charAt(0).toUpperCase())+'</div>'+
+      '<div><div class="agent-nm">'+fl.esc(em)+'</div><div class="agent-rid">'+(m.user_id===me?'you':fl.esc(m.full_name||''))+'</div></div></div></td>'+
+      '<td>'+roleTag(m.role)+'</td>'+
+      '<td style="text-align:right">'+(canRemove
+        ? '<button class="btn sec" onclick="removeMember(\''+m.user_id+'\')">Remove</button>'
+        : '<span class="muted" style="font-size:12px">—</span>')+'</td></tr>';
+  }).join('');
+
+  var invRows = (invites||[]).map(function(i){
+    return '<tr style="cursor:default"><td><div class="cell-agent">'+
+      '<div class="agent-ic '+fl.agentColor(i.email)+'">'+fl.esc(i.email.charAt(0).toUpperCase())+'</div>'+
+      '<div><div class="agent-nm">'+fl.esc(i.email)+'</div><div class="agent-rid">invited — activates when they sign in</div></div></div></td>'+
+      '<td><span class="fault-tag">Pending</span></td>'+
+      '<td style="text-align:right">'+(isAdmin
+        ? '<button class="btn sec" onclick="revokeInvite(\''+i.id+'\')">Revoke</button>'
+        : '<span class="muted" style="font-size:12px">—</span>')+'</td></tr>';
+  }).join('');
+
   var h = '<div class="card glow hairline">'+
     '<div class="card-head"><div><div class="card-title">Team</div>'+
-      '<div class="card-meta">People with access to this workspace</div></div></div>'+
-    '<table><thead><tr><th>Member</th><th>Role</th><th></th></tr></thead><tbody>'+
-      '<tr style="cursor:default"><td><div class="cell-agent">'+
-        '<div class="agent-ic '+fl.agentColor(email||'owner')+'">'+(email?email[0].toUpperCase():'?')+'</div>'+
-        '<div><div class="agent-nm">'+fl.esc(email||'you')+'</div><div class="agent-rid">you</div></div></div></td>'+
-        '<td><span class="fault-tag">Owner</span></td>'+
-        '<td><span class="muted" style="font-size:12px">—</span></td></tr>'+
-    '</tbody></table></div>';
+      '<div class="card-meta">People with access to '+fl.esc(orgName)+' — every project, run and fault in it</div></div></div>'+
+    '<table><thead><tr><th>Member</th><th>Role</th><th></th></tr></thead><tbody>'+rows+invRows+'</tbody></table></div>';
 
-  h += '<div class="card hairline" style="margin-top:16px">'+
-    '<div class="card-head"><div><div class="card-title">Invite a teammate</div>'+
-      '<div class="card-meta">They\'ll get access to this project\'s runs and faults</div></div></div>'+
-    '<div class="card-pad"><div class="row" style="gap:10px;align-items:flex-end">'+
-      '<div class="field" style="flex:1;max-width:340px"><label for="inviteEmail">Email</label>'+
-        '<input type="email" id="inviteEmail" placeholder="teammate@company.com"></div>'+
-      '<button class="btn sec" onclick="inviteMember()">Send invite</button></div></div></div>';
+  if(isAdmin){
+    h += '<div class="card hairline" style="margin-top:16px">'+
+      '<div class="card-head"><div><div class="card-title">Invite a teammate</div>'+
+        '<div class="card-meta">No email is sent — send them faultlineapp.com/app/ yourself; access activates when they sign in with this address</div></div></div>'+
+      '<div class="card-pad"><div class="row" style="gap:10px;align-items:flex-end">'+
+        '<div class="field" style="flex:1;max-width:340px"><label for="inviteEmail">Email</label>'+
+          '<input type="email" id="inviteEmail" placeholder="teammate@company.com"></div>'+
+        '<button class="btn pri" onclick="inviteMember()">Invite</button></div></div></div>';
+  }
   return h;
 }
-function inviteMember(){
+async function inviteMember(){
   var el = document.getElementById('inviteEmail');
-  var v = (el && el.value || '').trim();
-  if(!v || v.indexOf('@')<0){ fl.toast('Enter a valid email','warn'); return; }
-  fl.toast('Team invites aren\'t enabled in this build yet — coming soon','warn');
+  var v = (el && el.value || '').trim().toLowerCase();
+  if(!v || v.indexOf('@')<1){ fl.toast('Enter a valid email','warn'); return; }
+  var r = await fl.sb.from('org_invites').insert({ org_id: FL_CTX.orgId, email: v });
+  if(r.error){
+    if(teamNeedsMigration(r.error)) fl.toast('Team invites need the one-time database update (migration_team.sql)','warn');
+    else if((r.error.code||'')==='23505') fl.toast('Already invited','warn');
+    else if((r.error.code||'')==='42501' || ((r.error.message||'').indexOf('row-level security')>=0)) fl.toast('Only workspace admins can invite','warn');
+    else fl.toast('Invite failed: '+(r.error.message||'unknown error'),'warn');
+    return;
+  }
+  fl.toast('Invited '+v+' — access activates when they sign in');
+  loadTeam();
+}
+async function removeMember(uid){
+  if(!confirm('Remove this member from the workspace?')) return;
+  var r = await fl.sb.from('org_members').delete().eq('org_id', FL_CTX.orgId).eq('user_id', uid);
+  if(r.error){ fl.toast('Remove failed: '+(r.error.message||''),'warn'); return; }
+  fl.toast('Member removed');
+  loadTeam();
+}
+async function revokeInvite(id){
+  var r = await fl.sb.from('org_invites').delete().eq('id', id);
+  if(r.error){ fl.toast('Revoke failed: '+(r.error.message||''),'warn'); return; }
+  fl.toast('Invite revoked');
+  loadTeam();
 }
 
 /* ── ACCOUNT ───────────────────────────────────────────────────────── */
