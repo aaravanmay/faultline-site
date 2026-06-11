@@ -303,7 +303,7 @@ body.rmotion .htrack{overflow-x:auto;transform:none!important;scroll-snap-type:x
 <section id="how" style="padding-top:60px"><div class="wrap">
   <div class="sec-head"><div class="eyebrow reveal">How it works</div>
     <h2 class="rise"><span>Six ways to break it before production does.</span></h2>
-    <p class="reveal d1">Every mode injects realistic faults into your tools and watches what the agent does — then gates CI when it does the wrong thing.</p></div>
+    <p class="reveal d1">Every mode injects realistic faults into your tools and watches what the agent does — then gates CI when it does the wrong thing. Start with zero config: <span class="mono" style="font-size:13px;color:var(--tx)">faultline scan agent.py:my_agent</span> — no suite file, no rules, it finds your tools and breaks them itself.</p></div>
   <div class="cards">
     <div class="card reveal"><div class="ic">◆</div><h3>probe</h3><p>Honest edge cases you define — the inputs you already worry about.</p><code>faultline probe suite.py</code></div>
     <div class="card reveal d1"><div class="ic">✷</div><h3>fuzz</h3><p>Auto-generated edge inputs: empty, null, bent numbers, dropped keys.</p><code>faultline fuzz suite.py</code></div>
@@ -337,7 +337,8 @@ body.rmotion .htrack{overflow-x:auto;transform:none!important;scroll-snap-type:x
   <div class="feature-grid">
     <div class="feature-copy"><div class="eyebrow">The interceptor</div>
       <h2>It sits between your agent and its tools.</h2>
-      <p>faultline wraps every tool call, swaps the real response for a corrupted one, and compares what the agent does against what it <em>should</em> do — by your invariants, not a second model's opinion.</p></div>
+      <p>faultline wraps every tool call, swaps the real response for a corrupted one, and compares what the agent does against what it <em>should</em> do — by your invariants, not a second model's opinion.</p>
+      <p style="margin-top:14px">One line wires it into the framework you already use — <span class="mono" style="font-size:13px;color:var(--tx)">fl.instrument(graph)</span> for LangGraph, LangChain, LlamaIndex, pydantic-ai, and crewAI, each verified against the real installed library.</p></div>
     <div class="feature-art"><img id="diagram" data-par="-.04" src="assets/refined/interception.png" alt="faultline intercepts a broken tool call" /></div>
   </div>
 </div></div></section>
@@ -414,10 +415,10 @@ body.rmotion .htrack{overflow-x:auto;transform:none!important;scroll-snap-type:x
 <section id="install"><div class="wrap">
   <div class="sec-head"><div class="eyebrow reveal">Install</div>
     <h2 class="rise"><span>Integrated in minutes. Permanent in your repo.</span></h2>
-    <p class="reveal d1"><span class="mono" style="font-size:14px;color:var(--tx)">pip install faultline</span> — pure standard library, zero dependencies. Then each rung lives in a different layer of your project.</p></div>
+    <p class="reveal d1"><span class="mono" style="font-size:14px;color:var(--tx)">pip install faultline</span> — pure standard library, zero dependencies. First verdict in two minutes: <span class="mono" style="font-size:13px;color:var(--tx)">faultline init</span> scaffolds a suite + CI workflow, <span class="mono" style="font-size:13px;color:var(--tx)">faultline doctor</span> preflights your agent, <span class="mono" style="font-size:13px;color:var(--tx)">faultline scan</span> breaks its tools. Then each rung lives in a different layer of your project.</p></div>
   <div class="igrid">
     <div class="icard reveal"><span class="iwhere">In your repo · every PR</span><h3>CI gate — free</h3>
-      <div class="idesc">Commit one workflow file. Every pull request runs faultline and fails the build on a silent failure.</div>
+      <div class="idesc">Run <span class="mono" style="font-size:12px">faultline init</span> — it writes this workflow and a starter suite for you. Every pull request then fails the build on a silent failure.</div>
       <div class="icode"><button class="cbtn" onclick="cpc(this)">copy</button><pre><span class="c1"># .github/workflows/faultline.yml</span>
 - uses: actions/checkout@v4
 - uses: <span class="c2">aaravanmay/faultline@main</span>
