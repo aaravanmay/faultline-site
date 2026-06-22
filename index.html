@@ -82,6 +82,22 @@ section{position:relative;z-index:2;padding:120px 0}
 .term-bar i{width:11px;height:11px;border-radius:50%;background:#2c2c31;display:inline-block}
 .term-body{padding:20px 18px;font-family:var(--mono);font-size:13px;line-height:1.85;color:var(--tx-2)}
 .term-body .ok{color:var(--green)}.term-body .bad{color:var(--red)}.term-body .dim{color:var(--tx-3)}.term-body .key{color:var(--indigo)}
+/* hero terminal — real product output as the hero visual (replaces the abstract shard) */
+.hero-term{width:100%;max-width:560px;will-change:transform;box-shadow:0 40px 90px rgba(0,0,0,.6)}
+.hero-term .term-bar{justify-content:flex-start}
+.hero-term .term-bar .tt{margin-left:9px;font-family:var(--mono);font-size:11px;color:var(--tx-3);letter-spacing:.05em}
+.hero-term .term-body{font-size:12.5px;line-height:1.95;padding:18px 18px 20px}
+.hero-term .ln{opacity:0;transform:translateY(7px);animation:termln .5s var(--ease) forwards}
+.hero-term .ln:nth-child(1){animation-delay:.35s}
+.hero-term .ln:nth-child(2){animation-delay:.62s}
+.hero-term .ln:nth-child(3){animation-delay:.9s}
+.hero-term .ln:nth-child(4){animation-delay:1.18s}
+.hero-term .ln:nth-child(5){animation-delay:1.46s}
+.hero-term .ln:nth-child(6){animation-delay:1.78s}
+.hero-term .bad-ln{margin-top:5px;padding-top:9px;border-top:1px solid var(--line)}
+@keyframes termln{to{opacity:1;transform:none}}
+@media(max-width:900px){.hero-term{max-width:100%}}
+@media(prefers-reduced-motion:reduce){.hero-term .ln{opacity:1;transform:none;animation:none}}
 
 .cards{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:50px}
 @media(max-width:860px){.cards{grid-template-columns:1fr 1fr}}@media(max-width:560px){.cards{grid-template-columns:1fr}}
@@ -261,7 +277,19 @@ body.rmotion .htrack{overflow-x:auto;transform:none!important;scroll-snap-type:x
     <div class="hero-cta reveal d2"><a class="btn btn-primary" data-auth="signup" href="#signup">Start free</a><a class="btn btn-ghost" href="/demo.html">See it catch a bug</a></div>
     <div class="install reveal d3"><span class="pmt">$</span><b>pip install faultline</b><button class="copy" onclick="cp(this)">copy</button></div>
   </div>
-  <div class="hero-art"><div class="hero-glow"></div><img id="shard" src="assets/refined/hero-shard.png" alt="faultline" /></div>
+  <div class="hero-art"><div class="hero-glow"></div>
+    <div class="terminal hero-term" data-par="-.035" role="img" aria-label="faultline catching a silent failure: an agent refunds $210 on a $42 order">
+      <div class="term-bar"><i></i><i></i><i></i><span class="tt">faultline scan</span></div>
+      <div class="term-body">
+        <div class="ln"><span class="dim">$</span> faultline scan <span class="key">support_agent.py</span></div>
+        <div class="ln"><span class="dim">tool</span> get_order(<span class="key">"ORD-1001"</span>) <span class="ok">→ 200 OK</span></div>
+        <div class="ln"><span class="dim">&nbsp;&nbsp;returned</span> { amount: <span class="bad">$210.00</span> } <span class="dim"># real $42.00 · stale cache</span></div>
+        <div class="ln"><span class="dim">agent</span> issue_refund(<span class="key">"ORD-1001"</span>, <span class="bad">$210.00</span>)</div>
+        <div class="ln"><span class="ok">✓ run completed — exit 0</span></div>
+        <div class="ln bad-ln"><span class="bad">✗ SILENT-WRONG</span> <span class="dim">— refunded $210 on a $42 order</span></div>
+      </div>
+    </div>
+  </div>
 </div></div></header>
 
 <div class="trust reveal"><div class="wrap">
